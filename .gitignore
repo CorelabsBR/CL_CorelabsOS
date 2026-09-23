@@ -1,0 +1,12 @@
+/fontes/*
+!/fontes/.gitkeep
+/compilacao/*
+!/compilacao/.gitkeep
+/imagens/*
+!/imagens/.gitkeep
+/maquinas/*
+!/maquinas/.gitkeep
+/sistema-instalado/boot/*
+!/sistema-instalado/boot/.gitkeep
+*.log
+*~

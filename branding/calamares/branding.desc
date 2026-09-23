@@ -1,0 +1,29 @@
+---
+componentName: corelabsos
+
+windowExpanding: fullscreen
+
+strings:
+    productName:         Corelabs OS
+    shortProductName:    Corelabs OS
+    version:             26.04
+    shortVersion:        26.04
+    versionedName:       Corelabs OS 26.04
+    shortVersionedName:  Corelabs OS 26.04
+    bootloaderEntryName: Corelabs OS
+    productUrl:          https://corelabs.dev.br/
+    supportUrl:          https://corelabs.dev.br/contato/
+
+images:
+    productLogo:         "logo.png"
+    productIcon:         "icon.png"
+    productWelcome:      "welcome.png"
+
+slideshow: "show.qml"
+
+slideshowAPI: 1
+
+style:
+    SidebarBackground:   "#06111D"
+    SidebarText:         "#FFFFFF"
+    SidebarTextCurrent:  "#b30303"

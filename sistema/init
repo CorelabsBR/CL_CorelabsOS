@@ -1,0 +1,31 @@
+#!/bin/sh
+
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+export HOME=/root
+export TERM="${TERM:-linux}"
+
+falha() {
+    echo "ERRO DE INICIALIZAÇÃO: $*"
+    exec sh
+}
+
+mount -t devtmpfs devtmpfs /dev || falha "não foi possível montar /dev"
+mkdir -p /dev/pts /dev/shm
+mount -t devpts devpts /dev/pts || echo "Aviso: /dev/pts indisponível"
+mount -t proc proc /proc || falha "não foi possível montar /proc"
+mount -t sysfs sysfs /sys || falha "não foi possível montar /sys"
+mount -t tmpfs tmpfs /run || falha "não foi possível montar /run"
+mount -t tmpfs tmpfs /tmp || falha "não foi possível montar /tmp"
+hostname -F /etc/hostname 2>/dev/null || hostname corelabs
+
+cat /etc/motd
+echo "Kernel: $(uname -r) | Arquitetura: $(uname -m)"
+echo "Digite 'help' para ver os comandos internos do shell."
+echo
+
+setsid cttyhack sh
+echo "O shell principal foi encerrado. Desligando o sistema."
+sync
+umount /tmp /run /sys /proc 2>/dev/null
+poweroff -f
+

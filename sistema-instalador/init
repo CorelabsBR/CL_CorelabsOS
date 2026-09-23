@@ -1,0 +1,64 @@
+#!/bin/sh
+
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+falha() {
+    echo "ERRO DO INSTALADOR: $*"
+    exec sh
+}
+
+mount -t devtmpfs devtmpfs /dev || falha "não foi possível montar /dev"
+mkdir -p /dev/pts /alvo /alvo/boot/efi
+mount -t devpts devpts /dev/pts 2>/dev/null || true
+mount -t proc proc /proc || falha "não foi possível montar /proc"
+mount -t sysfs sysfs /sys || falha "não foi possível montar /sys"
+mdev -s
+
+autorizado=0
+for argumento in $(cat /proc/cmdline); do
+    [[ "$argumento" = "corelabs.instalar=SIM" ]] && autorizado=1
+done
+[[ "$autorizado" -eq 1 ]] || falha "autorização de instalação ausente"
+[[ -b /dev/vda ]] || falha "disco virtual /dev/vda ausente"
+
+echo "Corelabs OS: conteúdo detectado antes da instalação:"
+sfdisk --dump /dev/vda 2>/dev/null || echo "Disco sem tabela de partições reconhecida."
+blkid /dev/vda* 2>/dev/null || true
+
+echo "Corelabs OS: criando GPT, ESP FAT32 e raiz ext4 exclusivamente em /dev/vda"
+printf 'label: gpt\nsize=256MiB,type=U\ntype=L\n' | sfdisk --wipe always /dev/vda \
+    || falha "não foi possível criar a tabela GPT"
+partprobe /dev/vda 2>/dev/null || true
+mdev -s
+tentativa=0
+while { [[ ! -b /dev/vda1 ]] || [[ ! -b /dev/vda2 ]]; } && [[ "$tentativa" -lt 10 ]]; do
+    sleep 1
+    mdev -s
+    tentativa=$((tentativa + 1))
+done
+[[ -b /dev/vda1 && -b /dev/vda2 ]] || falha "partições não apareceram"
+
+mkfs.vfat -n CORELABS_EFI /dev/vda1 || falha "formatação FAT32 falhou"
+mke2fs -q -t ext4 -U '@RAIZ_UUID@' -L corelabs-root /dev/vda2 || falha "formatação ext4 falhou"
+mount -t ext4 /dev/vda2 /alvo || falha "montagem da raiz falhou"
+tar -xzf /opt/corelabs/rootfs.tar.gz -C /alvo || falha "extração do rootfs falhou"
+mkdir -p /alvo/boot/efi /alvo/proc /alvo/sys /alvo/dev /alvo/run /alvo/tmp
+chmod 1777 /alvo/tmp
+cp /opt/corelabs/vmlinuz /alvo/boot/vmlinuz-corelabs
+cp /opt/corelabs/initramfs-disco.cpio.gz /alvo/boot/initramfs-corelabs.cpio.gz
+cat > /alvo/etc/fstab <<EOF
+UUID=@RAIZ_UUID@  /         ext4  defaults,rw  0 1
+LABEL=CORELABS_EFI /boot/efi vfat  defaults     0 2
+proc                 /proc     proc  defaults     0 0
+sysfs                /sys      sysfs defaults     0 0
+devtmpfs             /dev      devtmpfs defaults  0 0
+EOF
+mount -t vfat /dev/vda1 /alvo/boot/efi || falha "montagem da ESP falhou"
+mkdir -p /alvo/boot/efi/EFI/BOOT
+cp /opt/corelabs/BOOTX64.EFI /alvo/boot/efi/EFI/BOOT/BOOTX64.EFI
+sync
+umount /alvo/boot/efi
+umount /alvo
+echo "CORELABS_INSTALACAO_OK"
+poweroff -f
+

@@ -1,0 +1,5 @@
+::sysinit:/bin/mount -a
+ttyS0::respawn:/bin/sh
+::ctrlaltdel:/sbin/reboot
+::shutdown:/bin/umount -a -r
+
