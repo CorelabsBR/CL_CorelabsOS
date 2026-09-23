@@ -1,4 +1,4 @@
-# Identidade oficial Corelabs OS 0.2 Genesis
+# Identidade oficial Corelabs OS 0.3 Forge
 
 A identidade é mantida nos arquivos de origem do rootfs e aplicada tanto a novas instalações quanto a sistemas persistentes existentes.
 

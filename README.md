@@ -35,7 +35,7 @@ O disco `maquinas/corelabs.qcow2` tem 40 GB e é preservado entre boots. `instal
 
 Configurações de compilação ficam em `configuracao/compilacao.conf`; memória, vCPUs, tamanho inicial do disco e timeout ficam em `configuracao/vm.conf`. Consulte [a documentação técnica](documentacao/fase1.md) e [a estratégia de toolchain](documentacao/toolchain.md).
 
-A identidade oficial é Corelabs OS 0.2 Genesis. Consulte [a documentação da identidade](documentacao/identidade.md) para arquivos instalados, cores opcionais e atualização não destrutiva.
+A identidade oficial é Corelabs OS 0.3 Forge. Consulte [a documentação da identidade](documentacao/identidade.md) para arquivos instalados, cores opcionais e atualização não destrutiva.
 
 ## Comandos
 
