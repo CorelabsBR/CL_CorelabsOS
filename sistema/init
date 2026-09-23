@@ -30,7 +30,17 @@ echo "Digite 'help' para ver os comandos internos do shell."
 echo
 
 setsid cttyhack sh
-echo "O shell principal foi encerrado. Desligando o sistema."
+
+echo "[Corelabs] Shell principal encerrado."
+
+if [ -x /etc/corelabs/encerramento.sh ]; then
+    /etc/corelabs/encerramento.sh ||
+        echo "[Corelabs] Aviso: encerramento com falhas."
+fi
+
+echo "[Corelabs] Sincronizando os dados..."
 sync
+
+echo "[Corelabs] Desligando."
 umount /tmp /run /sys /proc 2>/dev/null
 poweroff -f
