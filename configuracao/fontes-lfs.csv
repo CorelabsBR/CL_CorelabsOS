@@ -1,0 +1,12 @@
+componente;versao_referencia;licenca;origem;estado
+Binutils;2.47;GPL-3.0-or-later;https://ftp.gnu.org/gnu/binutils/;planejado
+GCC;16.2.0;GPL-3.0-or-later;https://ftp.gnu.org/gnu/gcc/;planejado
+glibc;2.44;LGPL-2.1-or-later;https://ftp.gnu.org/gnu/glibc/;planejado
+Bash;5.3;GPL-3.0-or-later;https://ftp.gnu.org/gnu/bash/;planejado
+Coreutils;9.11;GPL-3.0-or-later;https://ftp.gnu.org/gnu/coreutils/;planejado
+Util-linux;2.42.2;GPL-2.0-or-later e LGPL-2.1-or-later;https://mirrors.edge.kernel.org/pub/linux/utils/util-linux/;planejado
+systemd;261.3;LGPL-2.1-or-later;https://github.com/systemd/systemd/releases;planejado
+BusyBox;1.36.1;GPL-2.0-only;https://busybox.net/downloads/;ativo
+e2fsprogs;1.47.2;GPL-2.0-or-later e LGPL-2.0-or-later;https://www.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/;instalador
+GRUB;2.12;GPL-3.0-or-later;https://ftp.gnu.org/gnu/grub/;ativo via ferramenta do host
+

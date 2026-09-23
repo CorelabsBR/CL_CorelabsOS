@@ -16,6 +16,7 @@ qemu-img info --output=json "$disco" | grep -q '"format": "qcow2"' \
     || erro "alvo fora do caminho permitido"
 
 "$RAIZ/scripts/preparar-instalador.sh"
+"$RAIZ/scripts/inspecionar-disco.sh"
 
 mensagem "A instalação apagará as partições e os dados dentro de: $disco"
 mensagem "Nenhum disco físico do host será acessado."
@@ -42,4 +43,3 @@ if (( codigo == 0 )) && grep -q '^CORELABS_INSTALACAO_OK' "$log"; then
 else
     erro "instalação falhou com código $codigo; consulte $log"
 fi
-

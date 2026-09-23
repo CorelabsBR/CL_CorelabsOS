@@ -5,7 +5,7 @@ RAIZ="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 source "$RAIZ/scripts/biblioteca.sh"
 
 command -v apt-get >/dev/null 2>&1 || erro "instalação automática disponível apenas em hosts Debian/Ubuntu"
-pacotes=(build-essential bc bison flex m4 libelf-dev libssl-dev cpio curl xz-utils bzip2 qemu-system-x86 qemu-utils file rsync)
+pacotes=(build-essential bc bison flex m4 libelf-dev libssl-dev cpio curl xz-utils bzip2 qemu-system-x86 qemu-utils grub-efi-amd64-bin ovmf xorriso file rsync)
 executor=()
 if (( EUID != 0 )); then
     command -v sudo >/dev/null 2>&1 || erro "sudo é necessário apenas para instalar pacotes do host"

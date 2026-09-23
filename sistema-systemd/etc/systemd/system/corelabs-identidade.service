@@ -1,0 +1,12 @@
+[Unit]
+Description=Aplicar a identidade básica do Corelabs OS
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/hostname corelabs
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+

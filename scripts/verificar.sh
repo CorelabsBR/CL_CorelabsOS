@@ -9,15 +9,21 @@ source "$RAIZ/configuracao/vm.conf"
 falhas=0
 ok() { printf '[ OK ] %s\n' "$*"; }
 falhou() { printf '[FALHA] %s\n' "$*" >&2; falhas=$((falhas + 1)); }
+aviso() { printf '[AVISO] %s\n' "$*" >&2; }
 
-dependencias=(bash make gcc bison flex m4 curl sha256sum tar cpio gzip qemu-system-x86_64 qemu-img file rsync)
+dependencias=(bash make gcc curl sha256sum tar cpio gzip qemu-system-x86_64 qemu-img grub-mkstandalone file rsync)
 for comando in "${dependencias[@]}"; do
     command -v "$comando" >/dev/null 2>&1 && ok "dependência: $comando" || falhou "dependência ausente: $comando"
+done
+for comando in bison flex m4; do
+    command -v "$comando" >/dev/null 2>&1 \
+        && ok "dependência de reconstrução: $comando" \
+        || aviso "dependência de reconstrução ausente: $comando"
 done
 if printf '#include <libelf.h>\n' | gcc -E - >/dev/null 2>&1; then
     ok "cabeçalhos de desenvolvimento: libelf"
 else
-    falhou "cabeçalhos de desenvolvimento ausentes: libelf-dev"
+    aviso "cabeçalhos de reconstrução ausentes: libelf-dev"
 fi
 
 verificar_hash() {
@@ -32,6 +38,10 @@ verificar_hash() {
 }
 verificar_hash "$FONTES/linux-$KERNEL_VERSAO.tar.xz" "$KERNEL_SHA256"
 verificar_hash "$FONTES/busybox-$BUSYBOX_VERSAO.tar.bz2" "$BUSYBOX_SHA256"
+[[ ! -f "$FONTES/e2fsprogs-$E2FSPROGS_VERSAO.tar.xz" ]] || \
+    verificar_hash "$FONTES/e2fsprogs-$E2FSPROGS_VERSAO.tar.xz" "$E2FSPROGS_SHA256"
+[[ ! -f "$FONTES/util-linux-$UTIL_LINUX_VERSAO.tar.xz" ]] || \
+    verificar_hash "$FONTES/util-linux-$UTIL_LINUX_VERSAO.tar.xz" "$UTIL_LINUX_SHA256"
 
 kernel="$COMPILACAO/kernel/bzImage"
 initramfs="$IMAGENS/corelabs-initramfs.cpio.gz"
@@ -46,6 +56,14 @@ if [[ -s "$initramfs" ]] && gzip -t "$initramfs"; then
     fi
 else
     falhou "initramfs inválido ou ausente"
+fi
+if [[ -s "$IMAGENS/corelabs-instalador.cpio.gz" ]]; then
+    gzip -t "$IMAGENS/corelabs-instalador.cpio.gz" \
+        && ok "initramfs instalador válido" || falhou "initramfs instalador corrompido"
+fi
+if [[ -s "$IMAGENS/corelabs-initramfs-disco.cpio.gz" ]]; then
+    gzip -t "$IMAGENS/corelabs-initramfs-disco.cpio.gz" \
+        && ok "initramfs de transição válido" || falhou "initramfs de transição corrompido"
 fi
 if [[ -f "$disco" ]] && qemu-img info --output=json "$disco" | grep -q '"format": "qcow2"'; then
     ok "disco QCOW2 válido"

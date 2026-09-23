@@ -38,7 +38,7 @@ while { [[ ! -b /dev/vda1 ]] || [[ ! -b /dev/vda2 ]]; } && [[ "$tentativa" -lt 1
 done
 [[ -b /dev/vda1 && -b /dev/vda2 ]] || falha "partições não apareceram"
 
-mkfs.vfat -n CORELABS_EFI /dev/vda1 || falha "formatação FAT32 falhou"
+mkfs.vfat -n CORELABS_EF /dev/vda1 || falha "formatação FAT32 falhou"
 mke2fs -q -t ext4 -U '@RAIZ_UUID@' -L corelabs-root /dev/vda2 || falha "formatação ext4 falhou"
 mount -t ext4 /dev/vda2 /alvo || falha "montagem da raiz falhou"
 tar -xzf /opt/corelabs/rootfs.tar.gz -C /alvo || falha "extração do rootfs falhou"
@@ -48,7 +48,7 @@ cp /opt/corelabs/vmlinuz /alvo/boot/vmlinuz-corelabs
 cp /opt/corelabs/initramfs-disco.cpio.gz /alvo/boot/initramfs-corelabs.cpio.gz
 cat > /alvo/etc/fstab <<EOF
 UUID=@RAIZ_UUID@  /         ext4  defaults,rw  0 1
-LABEL=CORELABS_EFI /boot/efi vfat  defaults     0 2
+LABEL=CORELABS_EF  /boot/efi vfat  defaults     0 2
 proc                 /proc     proc  defaults     0 0
 sysfs                /sys      sysfs defaults     0 0
 devtmpfs             /dev      devtmpfs defaults  0 0
@@ -61,4 +61,3 @@ umount /alvo/boot/efi
 umount /alvo
 echo "CORELABS_INSTALACAO_OK"
 poweroff -f
-
