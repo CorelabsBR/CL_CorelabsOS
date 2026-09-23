@@ -7,6 +7,7 @@ case "${1:-}" in
             /run/lock \
             /run/corelabs \
             /var/log \
+            /var/log/corelabs \
             /var/tmp
 
         chmod 1777 /var/tmp
@@ -23,6 +24,7 @@ case "${1:-}" in
             /run/lock \
             /run/corelabs \
             /var/log \
+            /var/log/corelabs \
             /var/tmp
         do
             [ -d "$diretorio" ] || {

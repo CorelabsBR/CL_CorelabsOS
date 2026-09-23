@@ -24,7 +24,10 @@ mdev -s || falha "detecção dos dispositivos"
 for arquivo in \
     "$pacote/init" \
     "$pacote/etc/corelabs/inicializacao.sh" \
-    "$pacote/etc/corelabs/servicos/01-diretorios"     "$pacote/usr/bin/clservice"     "$pacote/usr/lib/os-release"     "$pacote/etc/motd"
+    "$pacote/etc/corelabs/encerramento.sh" \
+    "$pacote/etc/corelabs/servicos/01-diretorios" \
+    "$pacote/usr/lib/corelabs/registro.sh" \
+    "$pacote/usr/bin/clservice"     "$pacote/usr/lib/os-release"     "$pacote/etc/motd"
 do
     [ -s "$arquivo" ] || falha "arquivo ausente: $arquivo"
 done
@@ -62,10 +65,24 @@ fi
 mkdir -p "$alvo/etc/corelabs/servicos" ||
     falha "criação dos diretórios"
 
+# Instalar a biblioteca antes de iniciar os serviços.
+mkdir -p "$alvo/usr/lib/corelabs" ||
+    falha "diretório das bibliotecas"
+
+cp "$pacote/usr/lib/corelabs/registro.sh"    "$alvo/usr/lib/corelabs/registro.sh" ||
+    falha "instalação da biblioteca de registros"
+
+chmod 0644 "$alvo/usr/lib/corelabs/registro.sh" ||
+    falha "permissões da biblioteca"
+
 # Instalar os serviços antes de ativar o novo PID 1.
 cp "$pacote/etc/corelabs/inicializacao.sh" \
    "$alvo/etc/corelabs/inicializacao.sh" ||
     falha "instalação do executor"
+
+cp "$pacote/etc/corelabs/encerramento.sh" \
+   "$alvo/etc/corelabs/encerramento.sh" ||
+    falha "instalação do encerramento"
 
 cp "$pacote/etc/corelabs/servicos/01-diretorios" \
    "$alvo/etc/corelabs/servicos/01-diretorios" ||
@@ -73,6 +90,7 @@ cp "$pacote/etc/corelabs/servicos/01-diretorios" \
 
 chmod 0755 \
     "$alvo/etc/corelabs/inicializacao.sh" \
+    "$alvo/etc/corelabs/encerramento.sh" \
     "$alvo/etc/corelabs/servicos/01-diretorios" ||
     falha "permissões dos serviços"
 
@@ -92,10 +110,13 @@ cp "$pacote/usr/lib/os-release" "$alvo/usr/lib/os-release" ||
 
 # Preservar mensagens personalizadas.
 if [ ! -e "$alvo/etc/motd" ] ||
-   grep -Eq 'Corelabs OS 0\\.2 Genesis|sistema mínimo independente'        "$alvo/etc/motd" 2>/dev/null; then
+   grep -Fq 'Corelabs OS 0.2 Genesis' "$alvo/etc/motd" ||
+   grep -Fq 'Sistema persistente experimental' "$alvo/etc/motd"; then
 
     cp "$pacote/etc/motd" "$alvo/etc/motd" ||
         falha "atualização da mensagem"
+else
+    echo "[Corelabs] MOTD personalizado preservado."
 fi
 
 # A substituição do PID 1 é a última alteração.

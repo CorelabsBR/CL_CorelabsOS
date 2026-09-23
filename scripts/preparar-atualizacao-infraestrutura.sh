@@ -9,7 +9,7 @@ source "$RAIZ/configuracao/vm.conf"
 destino="$COMPILACAO/atualizacao-infraestrutura"
 pacote="$destino.tmp/opt/corelabs-infraestrutura"
 
-assinatura_init="c2179256cdbbd089c14bb65657793bcd5b5a04cf8c42fcddc3dd2353d9b8d38b"
+assinatura_init="e031081d0540eef61aa6095558bbd82cf9f0afaf0e19e1d73f93020d6ed8b8fe"
 
 "$RAIZ/scripts/rootfs.sh"
 
@@ -26,7 +26,7 @@ make -C "$FONTES/busybox-$BUSYBOX_VERSAO" \
 
 cp "$RAIZ/sistema-atualizador/infraestrutura-init" \
     "$destino.tmp/init"
-
+#Somos loucos, engenheiros, mas loucos
 sed -i \
     -e "s/@RAIZ_UUID@/$VM_RAIZ_UUID/g" \
     -e "s/@ASSINATURA_INIT@/$assinatura_init/g" \
@@ -37,10 +37,15 @@ cp "$RAIZ/sistema/init" "$pacote/init"
 cp "$RAIZ/sistema/etc/corelabs/inicializacao.sh" \
     "$pacote/etc/corelabs/inicializacao.sh"
 
+cp "$RAIZ/sistema/etc/corelabs/encerramento.sh" \
+    "$pacote/etc/corelabs/encerramento.sh"
+
 cp "$RAIZ/sistema/etc/corelabs/servicos/01-diretorios" \
     "$pacote/etc/corelabs/servicos/01-diretorios"
 
-mkdir -p "$pacote/usr/bin" "$pacote/usr/lib"
+mkdir -p     "$pacote/usr/bin"     "$pacote/usr/lib/corelabs"
+
+cp "$RAIZ/sistema/usr/lib/corelabs/registro.sh"     "$pacote/usr/lib/corelabs/registro.sh"
 
 cp "$RAIZ/sistema/usr/bin/clservice"     "$pacote/usr/bin/clservice"
 
@@ -52,6 +57,7 @@ chmod 0755 \
     "$destino.tmp/init" \
     "$pacote/init" \
     "$pacote/etc/corelabs/inicializacao.sh" \
+    "$pacote/etc/corelabs/encerramento.sh" \
     "$pacote/etc/corelabs/servicos/01-diretorios"
 
 mkdir -p "$IMAGENS"
