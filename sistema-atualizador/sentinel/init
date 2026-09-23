@@ -1,0 +1,133 @@
+#!/bin/sh
+set -eu
+
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+RAIZ_UUID="@RAIZ_UUID@"
+INIT_ESPERADO="@ASSINATURA_INIT@"
+SUPERVISOR_ESPERADO="@ASSINATURA_SUPERVISOR@"
+
+ALVO=/alvo
+PACOTE=/opt/corelabs-sentinel
+
+falhar() {
+    echo "[Sentinel] ERRO: $*" >&2
+    exec sh
+}
+
+echo "[Sentinel] Iniciando atualização 0.4..."
+
+mkdir -p /dev /proc /sys "$ALVO"
+
+mount -t devtmpfs devtmpfs /dev ||
+    falhar "Não foi possível montar /dev"
+
+mount -t proc proc /proc ||
+    falhar "Não foi possível montar /proc"
+
+mount -t sysfs sysfs /sys ||
+    falhar "Não foi possível montar /sys"
+
+mdev -s ||
+    falhar "Falha ao detectar dispositivos"
+
+# Verificar todo o pacote antes de modificar o disco.
+
+for arquivo in \
+    "$PACOTE/clsupervisor" \
+    "$PACOTE/os-release" \
+    "$PACOTE/motd"
+do
+    [ -s "$arquivo" ] ||
+        falhar "Arquivo ausente: $arquivo"
+done
+
+ASSINATURA_PACOTE="$(
+    sha256sum "$PACOTE/clsupervisor" |
+        cut -d ' ' -f 1
+)"
+
+[ "$ASSINATURA_PACOTE" = "$SUPERVISOR_ESPERADO" ] ||
+    falhar "Integridade do supervisor inválida"
+
+DISPOSITIVO=""
+
+for candidato in /dev/vd[a-z][0-9]* /dev/sd[a-z][0-9]*; do
+    [ -b "$candidato" ] || continue
+
+    IDENTIFICACAO="$(blkid "$candidato" 2>/dev/null || true)"
+
+    case "$IDENTIFICACAO" in
+        *"UUID=\"$RAIZ_UUID\""*)
+            DISPOSITIVO="$candidato"
+            break
+            ;;
+    esac
+done
+
+[ -n "$DISPOSITIVO" ] ||
+    falhar "Partição Sentinel não encontrada"
+
+mount -t ext4 -o rw "$DISPOSITIVO" "$ALVO" ||
+    falhar "Não foi possível montar a partição"
+
+[ -s "$ALVO/init" ] ||
+    falhar "PID 1 ausente"
+
+ASSINATURA_ATUAL="$(
+    sha256sum "$ALVO/init" |
+        cut -d ' ' -f 1
+)"
+
+echo "[Sentinel] PID 1: $ASSINATURA_ATUAL"
+
+[ "$ASSINATURA_ATUAL" = "$INIT_ESPERADO" ] ||
+    falhar "PID 1 desconhecido; atualização recusada"
+
+# Instalar o supervisor sem substituir o PID 1.
+
+mkdir -p "$ALVO/usr/bin" "$ALVO/usr/lib" ||
+    falhar "Falha ao preparar diretórios"
+
+cp "$PACOTE/clsupervisor" \
+   "$ALVO/usr/bin/clsupervisor.novo" ||
+    falhar "Falha ao copiar supervisor"
+
+chmod 0755 "$ALVO/usr/bin/clsupervisor.novo" ||
+    falhar "Falha nas permissões"
+
+ASSINATURA_INSTALADA="$(
+    sha256sum "$ALVO/usr/bin/clsupervisor.novo" |
+        cut -d ' ' -f 1
+)"
+
+[ "$ASSINATURA_INSTALADA" = "$SUPERVISOR_ESPERADO" ] ||
+    falhar "Supervisor copiado incorretamente"
+
+mv -f \
+    "$ALVO/usr/bin/clsupervisor.novo" \
+    "$ALVO/usr/bin/clsupervisor" ||
+    falhar "Falha ao instalar supervisor"
+
+cp "$PACOTE/os-release" \
+   "$ALVO/usr/lib/os-release" ||
+    falhar "Falha ao atualizar identidade"
+
+# Não substituir mensagens personalizadas.
+if [ ! -e "$ALVO/etc/motd" ] ||
+   grep -Fq 'Corelabs OS 0.3 Forge' "$ALVO/etc/motd"; then
+
+    cp "$PACOTE/motd" "$ALVO/etc/motd" ||
+        falhar "Falha ao atualizar MOTD"
+else
+    echo "[Sentinel] MOTD personalizado preservado."
+fi
+
+sync || falhar "Falha na sincronização"
+
+umount "$ALVO" ||
+    falhar "Falha ao desmontar partição"
+
+echo "CORELABS_SENTINEL_ATUALIZADA_OK"
+
+poweroff -f

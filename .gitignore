@@ -10,3 +10,26 @@
 !/sistema-instalado/boot/.gitkeep
 *.log
 *~
+
+# Corelabs Supervisor: código-fonte próprio.
+!/fontes/clsupervisor/
+!/fontes/clsupervisor/*.c
+!/fontes/clsupervisor/*.h
+!/fontes/clsupervisor/*.md
+
+# Backups locais do desenvolvimento.
+fontes/clsupervisor/*.bak
+fontes/clsupervisor/*.pre-*
+
+# Máquinas virtuais e imagens de disco
+*.qcow2
+*.qcow2.*
+*.fd
+
+# Backups locais
+/backups/
+
+# Arquivos temporários de compilação
+/compilacao/
+/imagens/
+/logs/

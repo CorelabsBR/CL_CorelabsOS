@@ -1,8 +1,8 @@
-PRETTY_NAME="Corelabs OS 0.3 Forge"
+PRETTY_NAME="Corelabs OS 0.4 Sentinel"
 NAME="Corelabs OS"
-VERSION_ID="0.3"
-VERSION="0.3 (Forge)"
-VERSION_CODENAME=forge
+VERSION_ID="0.4"
+VERSION="0.4 (Sentinel)"
+VERSION_CODENAME=sentinel
 ID=corelabs
 BUILD_ID=20260923
 ANSI_COLOR="0;31"
