@@ -8,11 +8,28 @@ falha() {
     exec sh
 }
 
-mount -t devtmpfs devtmpfs /dev || falha "não foi possível montar /dev"
-mkdir -p /dev/pts /nova-raiz
-mount -t devpts devpts /dev/pts 2>/dev/null || true
-mount -t proc proc /proc || falha "não foi possível montar /proc"
-mount -t sysfs sysfs /sys || falha "não foi possível montar /sys"
+# Preparar /proc antes de consultar as montagens.
+mkdir -p /proc /sys /dev /dev/pts /nova-raiz
+
+if ! grep -q ' /proc proc ' /proc/mounts 2>/dev/null; then
+    mount -t proc proc /proc ||
+        falha "não foi possível montar /proc"
+fi
+
+if ! grep -q ' /dev devtmpfs ' /proc/mounts; then
+    mount -t devtmpfs devtmpfs /dev ||
+        falha "não foi possível montar /dev"
+fi
+
+if ! grep -q ' /dev/pts devpts ' /proc/mounts; then
+    mount -t devpts devpts /dev/pts 2>/dev/null || true
+fi
+
+if ! grep -q ' /sys sysfs ' /proc/mounts; then
+    mount -t sysfs sysfs /sys ||
+        falha "não foi possível montar /sys"
+fi
+
 mdev -s
 
 raiz_uuid=""
@@ -21,7 +38,7 @@ for argumento in $(cat /proc/cmdline); do
         root=UUID=*) raiz_uuid="${argumento#root=UUID=}" ;;
     esac
 done
-[[ -n "$raiz_uuid" ]] || falha "parâmetro root=UUID ausente"
+[ -n "$raiz_uuid" ] || falha "parâmetro root=UUID ausente"
 
 dispositivo=""
 tentativa=0
@@ -37,9 +54,9 @@ while [ "$tentativa" -lt 20 ] && [ -z "$dispositivo" ]; do
     tentativa=$((tentativa + 1))
 done
 
-[[ -n "$dispositivo" ]] || falha "raiz UUID=$raiz_uuid não encontrada"
+[ -n "$dispositivo" ] || falha "raiz UUID=$raiz_uuid não encontrada"
 mount -t ext4 -o rw "$dispositivo" /nova-raiz || falha "não foi possível montar $dispositivo"
-[[ -x /nova-raiz/init ]] || falha "o sistema instalado não contém /init"
+[ -x /nova-raiz/init ] || falha "o sistema instalado não contém /init"
 
 echo "Corelabs OS: raiz persistente montada de $dispositivo"
 umount /sys /proc

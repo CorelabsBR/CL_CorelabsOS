@@ -9,11 +9,30 @@ falha() {
     exec sh
 }
 
-mount -t devtmpfs devtmpfs /dev || falha "não foi possível montar /dev"
+# Montar /proc primeiro para consultar as montagens existentes.
+if ! grep -q ' /proc proc ' /proc/mounts 2>/dev/null; then
+    mount -t proc proc /proc ||
+        falha "não foi possível montar /proc"
+fi
+
+# O kernel pode disponibilizar devtmpfs automaticamente.
+if ! grep -q ' /dev devtmpfs ' /proc/mounts; then
+    mount -t devtmpfs devtmpfs /dev ||
+        falha "não foi possível montar /dev"
+fi
+
 mkdir -p /dev/pts /dev/shm
-mount -t devpts devpts /dev/pts || echo "Aviso: /dev/pts indisponível"
-mount -t proc proc /proc || falha "não foi possível montar /proc"
-mount -t sysfs sysfs /sys || falha "não foi possível montar /sys"
+
+if ! grep -q ' /dev/pts devpts ' /proc/mounts; then
+    mount -t devpts devpts /dev/pts ||
+        echo "Aviso: /dev/pts indisponível"
+fi
+
+if ! grep -q ' /sys sysfs ' /proc/mounts; then
+    mount -t sysfs sysfs /sys ||
+        falha "não foi possível montar /sys"
+fi
+
 mount -t tmpfs tmpfs /run || falha "não foi possível montar /run"
 mount -t tmpfs tmpfs /tmp || falha "não foi possível montar /tmp"
 hostname -F /etc/hostname 2>/dev/null || hostname corelabs
