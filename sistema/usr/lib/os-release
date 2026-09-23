@@ -1,0 +1,12 @@
+PRETTY_NAME="Corelabs OS 0.2 Genesis"
+NAME="Corelabs OS"
+VERSION_ID="0.2"
+VERSION="0.2 (Genesis)"
+VERSION_CODENAME=genesis
+ID=corelabs
+BUILD_ID=20260923
+ANSI_COLOR="0;31"
+HOME_URL="https://corelabs.dev.br/"
+SUPPORT_URL="https://corelabs.dev.br/contato/"
+BUG_REPORT_URL="https://github.com/girellidev"
+LOGO=corelabs-logo

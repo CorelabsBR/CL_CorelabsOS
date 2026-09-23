@@ -14,6 +14,7 @@ Comandos:
   rootfs             Compila o BusyBox e monta o sistema mínimo
   imagem             Cria o disco QCOW2 persistente, se estiver ausente
   instalar           Instala o sistema no QCOW2 após confirmação explícita
+  atualizar-identidade Atualiza a identidade sem formatar o disco
   iniciar [--grafico] Inicializa o sistema instalado por UEFI
   iniciar --recuperacao Inicializa diretamente a Fase 0
   testar-persistencia Testa gravação e leitura após reinicialização
@@ -41,6 +42,7 @@ case "$comando" in
         ;;
     imagem) exec "$RAIZ/scripts/imagem.sh" "$@" ;;
     instalar) exec "$RAIZ/scripts/instalar.sh" "$@" ;;
+    atualizar-identidade) exec "$RAIZ/scripts/atualizar-identidade.sh" "$@" ;;
     iniciar) exec "$RAIZ/scripts/vm.sh" "$@" ;;
     testar-persistencia) exec "$RAIZ/scripts/testar-persistencia.sh" "$@" ;;
     verificar) exec "$RAIZ/scripts/verificar.sh" "$@" ;;

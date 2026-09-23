@@ -27,7 +27,7 @@ if [[ ! -d "$arvore" ]]; then
     tar -C "$FONTES" -xf "$arquivo"
 fi
 mkdir -p -- "$saida"
-
+# fazendo um os, e pensando nela. só não bater no guardrail.
 if (( ! forcar )) && [[ -s "$artefato" && -f "$marca" ]] && [[ "$(<"$marca")" == "$hash_config" ]]; then
     mensagem "Kernel já está atualizado: $artefato"
     exit 0

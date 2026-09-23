@@ -18,6 +18,7 @@ mount -t tmpfs tmpfs /run || falha "não foi possível montar /run"
 mount -t tmpfs tmpfs /tmp || falha "não foi possível montar /tmp"
 hostname -F /etc/hostname 2>/dev/null || hostname corelabs
 
+[ ! -x /usr/lib/corelabs/banner ] || /usr/lib/corelabs/banner
 cat /etc/motd
 echo "Kernel: $(uname -r) | Arquitetura: $(uname -m)"
 echo "Digite 'help' para ver os comandos internos do shell."
@@ -28,4 +29,3 @@ echo "O shell principal foi encerrado. Desligando o sistema."
 sync
 umount /tmp /run /sys /proc 2>/dev/null
 poweroff -f
-

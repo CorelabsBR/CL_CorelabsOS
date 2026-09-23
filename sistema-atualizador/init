@@ -1,0 +1,253 @@
+#!/bin/sh
+set -eu
+
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+raiz_uuid="@RAIZ_UUID@"
+alvo=/alvo
+payload=/opt/corelabs-identidade
+
+# SHA-256 do PID 1 original, obtido diretamente do Git.
+assinatura_original="57682607d76501a98788cd28f2f6ad7f1ee468b98ab4dd8e44b415c1a095f950"
+
+falha() {
+    echo "ERRO DA ATUALIZAÇÃO: $*" >&2
+    echo "A atualização foi interrompida." >&2
+    exec sh
+}
+
+exigir_arquivo() {
+    [ -s "$1" ] || falha "arquivo ausente ou vazio: $1"
+}
+
+copiar_arquivo() {
+    origem="$1"
+    destino="$2"
+
+    exigir_arquivo "$origem"
+    cp "$origem" "$destino" ||
+        falha "não foi possível copiar $origem"
+}
+
+echo "Corelabs OS — Atualização de identidade"
+echo "Preparando ambiente..."
+
+mount -t devtmpfs devtmpfs /dev ||
+    falha "não foi possível montar /dev"
+
+mkdir -p /dev/pts "$alvo" ||
+    falha "não foi possível criar diretórios"
+
+mount -t devpts devpts /dev/pts 2>/dev/null || true
+
+mount -t proc proc /proc ||
+    falha "não foi possível montar /proc"
+
+mount -t sysfs sysfs /sys ||
+    falha "não foi possível montar /sys"
+
+mdev -s || falha "não foi possível detectar dispositivos"
+
+# Validar o conteúdo do pacote antes de modificar o disco.
+
+for arquivo in \
+    "$payload/usr/lib/os-release" \
+    "$payload/usr/lib/corelabs/banner" \
+    "$payload/usr/share/pixmaps/corelabs-logo.svg" \
+    "$payload/etc/corelabs/logo.ascii" \
+    "$payload/etc/corelabs/banner.conf" \
+    "$payload/etc/issue" \
+    "$payload/etc/motd" \
+    "$payload/init"
+do
+    exigir_arquivo "$arquivo"
+done
+
+# Localizar exclusivamente a partição com o UUID esperado.
+
+dispositivo=""
+
+for candidato in /dev/vd[a-z][0-9]* /dev/sd[a-z][0-9]*; do
+    [ -b "$candidato" ] || continue
+
+    identificacao="$(blkid "$candidato" 2>/dev/null || true)"
+
+    case "$identificacao" in
+        *"UUID=\"$raiz_uuid\""*)
+            dispositivo="$candidato"
+            break
+            ;;
+    esac
+
+
+done
+
+[ -n "$dispositivo" ] ||
+    falha "partição com UUID=$raiz_uuid não encontrada"
+
+echo "Partição identificada: $dispositivo"
+
+mount -t ext4 -o rw "$dispositivo" "$alvo" ||
+    falha "não foi possível montar a raiz"
+
+[ -f "$alvo/init" ] ||
+    falha "PID 1 instalado não encontrado"
+
+# Verificar a assinatura ANTES de modificar arquivos.
+
+assinatura_instalada="$(
+    sha256sum "$alvo/init" | cut -d ' ' -f 1
+)" || falha "não foi possível verificar o PID 1"
+
+atualizar_init=0
+
+if [ "$assinatura_instalada" = "$assinatura_original" ]; then
+    atualizar_init=1
+    echo "PID 1 original reconhecido."
+else
+    echo "PID 1 diferente da versão original: preservado."
+fi
+
+# Criar diretórios necessários.
+
+mkdir -p \
+    "$alvo/usr/lib/corelabs" \
+    "$alvo/usr/share/pixmaps" \
+    "$alvo/etc/corelabs" ||
+    falha "não foi possível preparar diretórios"
+
+# Instalar componentes oficiais.
+
+copiar_arquivo \
+    "$payload/usr/lib/os-release" \
+    "$alvo/usr/lib/os-release"
+
+copiar_arquivo \
+    "$payload/usr/lib/corelabs/banner" \
+    "$alvo/usr/lib/corelabs/banner"
+
+chmod 0755 "$alvo/usr/lib/corelabs/banner" ||
+    falha "não foi possível configurar o banner"
+
+copiar_arquivo \
+    "$payload/usr/share/pixmaps/corelabs-logo.svg" \
+    "$alvo/usr/share/pixmaps/corelabs-logo.svg"
+
+# Substituir o PID 1 somente quando a assinatura corresponder.
+
+if [ "$atualizar_init" -eq 1 ]; then
+    echo "Atualizando PID 1 oficial..."
+
+    copiar_arquivo "$payload/init" "$alvo/init.novo"
+
+    chmod 0755 "$alvo/init.novo" ||
+        falha "não foi possível configurar o novo PID 1"
+
+    mv -f "$alvo/init.novo" "$alvo/init" ||
+        falha "não foi possível substituir o PID 1"
+
+    echo "PID 1 atualizado."
+fi
+
+# Configurar os-release, preservando personalizações.
+
+if [ ! -e "$alvo/etc/os-release" ] &&
+   [ ! -L "$alvo/etc/os-release" ]; then
+
+    ln -s ../usr/lib/os-release "$alvo/etc/os-release" ||
+        falha "não foi possível criar os-release"
+
+elif [ -L "$alvo/etc/os-release" ]; then
+
+    destino="$(readlink "$alvo/etc/os-release")"
+
+    if [ "$destino" != "../usr/lib/os-release" ]; then
+        echo "os-release personalizado preservado."
+    fi
+
+elif grep -q 'Corelabs OS Fase 1 Persistente' \
+    "$alvo/etc/os-release" 2>/dev/null; then
+
+    rm -f "$alvo/etc/os-release" ||
+        falha "não foi possível remover os-release antigo"
+
+    ln -s ../usr/lib/os-release "$alvo/etc/os-release" ||
+        falha "não foi possível criar o novo link"
+
+else
+    echo "os-release personalizado preservado."
+fi
+
+# Preservar a logo ASCII se já tiver sido personalizada.
+
+if [ ! -e "$alvo/etc/corelabs/logo.ascii" ]; then
+    copiar_arquivo \
+        "$payload/etc/corelabs/logo.ascii" \
+        "$alvo/etc/corelabs/logo.ascii"
+else
+    echo "Logo ASCII existente preservada."
+fi
+
+if [ ! -e "$alvo/etc/corelabs/banner.conf" ]; then
+    copiar_arquivo \
+        "$payload/etc/corelabs/banner.conf" \
+        "$alvo/etc/corelabs/banner.conf"
+fi
+
+# Atualizar os arquivos de identificação.
+
+if [ ! -e "$alvo/etc/issue" ]; then
+
+    copiar_arquivo "$payload/etc/issue" "$alvo/etc/issue"
+
+elif grep -q 'Corelabs OS' "$alvo/etc/issue" 2>/dev/null; then
+
+    copiar_arquivo "$payload/etc/issue" "$alvo/etc/issue"
+
+else
+    echo "/etc/issue personalizado preservado."
+fi
+
+if [ ! -e "$alvo/etc/motd" ]; then
+
+    copiar_arquivo "$payload/etc/motd" "$alvo/etc/motd"
+
+elif grep -Eq \
+    'sistema mínimo independente|Corelabs OS 0\.2 Genesis' \
+    "$alvo/etc/motd" 2>/dev/null; then
+
+    copiar_arquivo "$payload/etc/motd" "$alvo/etc/motd"
+
+else
+    echo "/etc/motd personalizado preservado."
+fi
+
+# Configurar hostname somente quando não houver personalização.
+
+if [ ! -e "$alvo/etc/hostname" ] ||
+   grep -qx corelabs "$alvo/etc/hostname" 2>/dev/null; then
+
+    printf 'corelabs\n' > "$alvo/etc/hostname" ||
+        falha "não foi possível configurar hostname"
+
+else
+    echo "Hostname personalizado preservado."
+fi
+
+# Confirmar arquivos essenciais.
+
+exigir_arquivo "$alvo/usr/lib/os-release"
+exigir_arquivo "$alvo/usr/lib/corelabs/banner"
+exigir_arquivo "$alvo/etc/corelabs/logo.ascii"
+exigir_arquivo "$alvo/init"
+
+echo "Sincronizando alterações..."
+
+sync || falha "falha na sincronização"
+
+umount "$alvo" ||
+    falha "não foi possível desmontar a raiz"
+
+echo "CORELABS_IDENTIDADE_ATUALIZADA_OK"
+
+poweroff -f

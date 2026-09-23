@@ -55,7 +55,11 @@ rm -rf -- "$rootfs.tmp"
 mkdir -p -- "$rootfs.tmp"/{dev,proc,sys,run,tmp,root,mnt,etc,usr,var,home}
 make -C "$arvore" O="$saida" CONFIG_PREFIX="$rootfs.tmp" install >>"$LOGS/rootfs.log" 2>&1
 rsync -a -- "$RAIZ/sistema/" "$rootfs.tmp/"
+mkdir -p -- "$rootfs.tmp/etc/corelabs" "$rootfs.tmp/usr/share/pixmaps"
+cp -- "$RAIZ/branding/system/ascii.txt" "$rootfs.tmp/etc/corelabs/logo.ascii"
+cp -- "$RAIZ/branding/system/oslogo.svg" "$rootfs.tmp/usr/share/pixmaps/corelabs-logo.svg"
 chmod 0755 "$rootfs.tmp/init"
+chmod 0755 "$rootfs.tmp/usr/lib/corelabs/banner"
 chmod 1777 "$rootfs.tmp/tmp"
 rm -rf -- "$rootfs"
 mv -- "$rootfs.tmp" "$rootfs"

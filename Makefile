@@ -1,4 +1,4 @@
-.PHONY: all dependencias compilar kernel rootfs initramfs imagem instalar iniciar testar-persistencia verificar limpar ajuda
+.PHONY: all dependencias compilar kernel rootfs initramfs imagem instalar atualizar-identidade iniciar testar-persistencia verificar limpar ajuda
 
 all: compilar
 dependencias:
@@ -15,6 +15,8 @@ imagem:
 	./corelabs.sh imagem
 instalar:
 	./corelabs.sh instalar
+atualizar-identidade:
+	./corelabs.sh atualizar-identidade
 iniciar:
 	./corelabs.sh iniciar
 testar-persistencia:

@@ -1,0 +1,18 @@
+#!/bin/sh
+
+logo=/etc/corelabs/logo.ascii
+cores=1
+
+if [ -r /etc/corelabs/banner.conf ]; then
+    # shellcheck source=/dev/null
+    . /etc/corelabs/banner.conf
+fi
+
+[ -r "$logo" ] || exit 0
+if [ "${cores:-0}" = 1 ] && [ -t 1 ]; then
+    awk 'BEGIN { vermelho="\033[31m"; claro="\033[91m"; normal="\033[0m" }
+         { gsub(/@/, vermelho "@" normal); gsub(/%/, claro "%" normal); print }' "$logo"
+else
+    cat "$logo"
+fi
+
