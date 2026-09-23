@@ -1,0 +1,41 @@
+#!/bin/sh
+set -e
+
+case "${1:-}" in
+    start)
+        mkdir -p \
+            /run/lock \
+            /run/corelabs \
+            /var/log \
+            /var/tmp
+
+        chmod 1777 /var/tmp
+        ;;
+
+    stop)
+        # Os diretórios são compartilhados.
+        # Não devem ser removidos durante a execução.
+        exit 0
+        ;;
+
+    status)
+        for diretorio in \
+            /run/lock \
+            /run/corelabs \
+            /var/log \
+            /var/tmp
+        do
+            [ -d "$diretorio" ] || {
+                echo "Diretório ausente: $diretorio"
+                exit 1
+            }
+        done
+
+        echo "Serviço de diretórios operacional."
+        ;;
+
+    *)
+        echo "Uso: $0 {start|stop|status}" >&2
+        exit 2
+        ;;
+esac

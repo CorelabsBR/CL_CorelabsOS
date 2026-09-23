@@ -1,0 +1,66 @@
+#!/bin/sh
+
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+diretorio=/etc/corelabs/servicos
+
+uso() {
+    echo "Uso: clservice {start|stop|restart|status|list} [serviço]"
+    exit 2
+}
+
+[ "$#" -ge 1 ] || uso
+
+acao="$1"
+nome="${2:-}"
+
+case "$acao" in
+    list)
+        for servico in "$diretorio"/*; do
+            [ -f "$servico" ] || continue
+            [ -x "$servico" ] || continue
+
+            case "$servico" in
+                *.disabled) continue ;;
+            esac
+
+            echo "${servico##*/}"
+        done
+
+        exit 0
+        ;;
+
+    start|stop|restart|status)
+        [ -n "$nome" ] || uso
+        ;;
+
+    *)
+        uso
+        ;;
+esac
+
+# Impedir caminhos arbitrários e traversal.
+case "$nome" in
+    *[!a-zA-Z0-9_.-]*|.|..|*.disabled)
+        echo "Nome de serviço inválido." >&2
+        exit 2
+        ;;
+esac
+
+servico="$diretorio/$nome"
+
+[ -f "$servico" ] && [ -x "$servico" ] || {
+    echo "Serviço não encontrado: $nome" >&2
+    exit 1
+}
+
+case "$acao" in
+    restart)
+        "$servico" stop || exit 1
+        "$servico" start
+        ;;
+
+    *)
+        "$servico" "$acao"
+        ;;
+esac

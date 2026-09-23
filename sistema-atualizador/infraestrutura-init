@@ -1,0 +1,118 @@
+#!/bin/sh
+set -eu
+
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+raiz_uuid="@RAIZ_UUID@"
+assinatura_esperada="@ASSINATURA_INIT@"
+
+alvo=/alvo
+pacote=/opt/corelabs-infraestrutura
+
+falha() {
+    echo "[Corelabs] ERRO: $*" >&2
+    exec sh
+}
+
+mount -t devtmpfs devtmpfs /dev || falha "devtmpfs"
+mkdir -p /proc /sys "$alvo"
+mount -t proc proc /proc || falha "proc"
+mount -t sysfs sysfs /sys || falha "sysfs"
+
+mdev -s || falha "detecção dos dispositivos"
+
+for arquivo in \
+    "$pacote/init" \
+    "$pacote/etc/corelabs/inicializacao.sh" \
+    "$pacote/etc/corelabs/servicos/01-diretorios"     "$pacote/usr/bin/clservice"     "$pacote/usr/lib/os-release"     "$pacote/etc/motd"
+do
+    [ -s "$arquivo" ] || falha "arquivo ausente: $arquivo"
+done
+
+dispositivo=""
+
+for candidato in /dev/vd[a-z][0-9]* /dev/sd[a-z][0-9]*; do
+    [ -b "$candidato" ] || continue
+
+    identificacao="$(blkid "$candidato" 2>/dev/null || true)"
+
+    case "$identificacao" in
+        *"UUID=\"$raiz_uuid\""*)
+            dispositivo="$candidato"
+            break
+            ;;
+    esac
+done
+
+[ -n "$dispositivo" ] || falha "partição não encontrada"
+
+mount -t ext4 -o rw "$dispositivo" "$alvo" ||
+    falha "montagem da partição"
+
+[ -s "$alvo/init" ] || falha "PID 1 ausente"
+
+assinatura_atual="$(sha256sum "$alvo/init" | cut -d ' ' -f 1)"
+assinatura_nova="$(sha256sum "$pacote/init" | cut -d ' ' -f 1)"
+
+if [ "$assinatura_atual" != "$assinatura_esperada" ] &&
+   [ "$assinatura_atual" != "$assinatura_nova" ]; then
+    falha "PID 1 desconhecido; atualização recusada"
+fi
+
+mkdir -p "$alvo/etc/corelabs/servicos" ||
+    falha "criação dos diretórios"
+
+# Instalar os serviços antes de ativar o novo PID 1.
+cp "$pacote/etc/corelabs/inicializacao.sh" \
+   "$alvo/etc/corelabs/inicializacao.sh" ||
+    falha "instalação do executor"
+
+cp "$pacote/etc/corelabs/servicos/01-diretorios" \
+   "$alvo/etc/corelabs/servicos/01-diretorios" ||
+    falha "instalação do serviço"
+
+chmod 0755 \
+    "$alvo/etc/corelabs/inicializacao.sh" \
+    "$alvo/etc/corelabs/servicos/01-diretorios" ||
+    falha "permissões dos serviços"
+
+# Instalar o gerenciador e atualizar a identidade.
+
+mkdir -p "$alvo/usr/bin" "$alvo/usr/lib" ||
+    falha "diretórios do sistema"
+
+cp "$pacote/usr/bin/clservice" "$alvo/usr/bin/clservice" ||
+    falha "instalação do gerenciador"
+
+chmod 0755 "$alvo/usr/bin/clservice" ||
+    falha "permissões do gerenciador"
+
+cp "$pacote/usr/lib/os-release" "$alvo/usr/lib/os-release" ||
+    falha "atualização da identidade"
+
+# Preservar mensagens personalizadas.
+if [ ! -e "$alvo/etc/motd" ] ||
+   grep -Eq 'Corelabs OS 0\\.2 Genesis|sistema mínimo independente'        "$alvo/etc/motd" 2>/dev/null; then
+
+    cp "$pacote/etc/motd" "$alvo/etc/motd" ||
+        falha "atualização da mensagem"
+fi
+
+# A substituição do PID 1 é a última alteração.
+if [ "$assinatura_atual" != "$assinatura_nova" ]; then
+    cp "$pacote/init" "$alvo/init.novo" ||
+        falha "cópia do PID 1"
+
+    chmod 0755 "$alvo/init.novo" ||
+        falha "permissões do PID 1"
+
+    mv -f "$alvo/init.novo" "$alvo/init" ||
+        falha "substituição do PID 1"
+fi
+
+sync || falha "sincronização"
+umount "$alvo" || falha "desmontagem"
+
+echo "CORELABS_INFRAESTRUTURA_ATUALIZADA_OK"
+
+poweroff -f
