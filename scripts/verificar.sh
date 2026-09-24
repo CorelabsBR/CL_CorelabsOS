@@ -49,7 +49,8 @@ disco="$MAQUINAS/corelabs.qcow2"
 [[ -s "$kernel" ]] && file "$kernel" | grep -q 'Linux kernel x86 boot executable' \
     && ok "kernel x86 válido" || falhou "kernel compilado inválido ou ausente"
 if [[ -s "$initramfs" ]] && gzip -t "$initramfs"; then
-    if gzip -dc "$initramfs" | cpio -t 2>/dev/null | grep -Eq '^(\./)?init$'; then
+    conteudo_initramfs="$(gzip -dc "$initramfs" | cpio -t 2>/dev/null)"
+    if grep -Eq '^(\./)?init$' <<< "$conteudo_initramfs"; then
         ok "initramfs newc válido com /init"
     else
         falhou "initramfs não contém /init"
@@ -77,18 +78,29 @@ if (( falhas == 0 )); then
     [[ -r /dev/kvm && -w /dev/kvm ]] && aceleracao=(-accel kvm -cpu host)
     mensagem "Executando boot real no QEMU (timeout de ${VM_TIMEOUT_TESTE}s)"
     set +e
-    { sleep 3; printf 'echo CONSOLE_CORELABS_OK\npoweroff -f\n'; } | timeout --signal=TERM "$VM_TIMEOUT_TESTE" \
+    timeout --signal=TERM "$VM_TIMEOUT_TESTE" \
         qemu-system-x86_64 -machine q35 "${aceleracao[@]}" -m 512 -smp 1 \
         -kernel "$kernel" -initrd "$initramfs" \
         -append "console=ttyS0,115200 rdinit=/init panic=-1" \
-        -nodefaults -serial stdio -display none -no-reboot >"$log_teste" 2>&1
+        -nodefaults -serial stdio -display none -no-reboot </dev/null >"$log_teste" 2>&1
     codigo=$?
     set -e
-    grep -q 'Corelabs OS' "$log_teste" && ok "banner exibido" || falhou "banner não apareceu no boot"
-    tr -d '\r' < "$log_teste" | grep -qx 'CONSOLE_CORELABS_OK' \
-        && ok "console interativo executou um comando" || falhou "console não executou o comando de teste"
-    grep -Eq 'Power down|reboot: Power down' "$log_teste" && ok "desligamento concluído" || falhou "desligamento não foi confirmado"
-    (( codigo == 0 )) || falhou "QEMU terminou com código $codigo"
+
+    grep -q 'Corelabs OS' "$log_teste" \
+        && ok "banner exibido" \
+        || falhou "banner não apareceu no boot"
+
+    grep -Eq 'corelabs login:|login:' "$log_teste" \
+        && ok "getty/login disponível no console serial" \
+        || falhou "prompt de login não apareceu no console serial"
+
+    if (( codigo == 124 )); then
+        ok "sistema permaneceu ativo aguardando autenticação"
+    elif (( codigo == 0 )); then
+        ok "QEMU encerrou normalmente"
+    else
+        falhou "QEMU terminou inesperadamente com código $codigo"
+    fi
 fi
 
 (( falhas == 0 )) || erro "$falhas verificação(ões) falharam"

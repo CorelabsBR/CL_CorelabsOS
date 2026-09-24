@@ -12,8 +12,14 @@ arvore="$FONTES/busybox-$BUSYBOX_VERSAO"
 saida="$COMPILACAO/busybox"
 rootfs="$COMPILACAO/rootfs"
 marca="$saida/.configuracao.sha256"
-hash_config="$({ sha256sum "$RAIZ/configuracao/compilacao.conf"; find "$RAIZ/sistema" -type f -print0 | sort -z | xargs -0 sha256sum; } | sha256sum | cut -d' ' -f1)"
-
+hash_config="$({
+    printf '%s\n' \
+        "BUSYBOX_VERSAO=$BUSYBOX_VERSAO" \
+        "CONFIG_STATIC=y" \
+        "CONFIG_SH_IS_ASH=y" \
+        "CONFIG_CTTYHACK=y" \
+        "CONFIG_TC=n"
+} | sha256sum | cut -d' ' -f1)"
 baixar_verificado "$BUSYBOX_URL" "$arquivo" "$BUSYBOX_SHA256"
 if [[ ! -d "$arvore" ]]; then
     mensagem "Extraindo BusyBox $BUSYBOX_VERSAO"
@@ -56,10 +62,13 @@ mkdir -p -- "$rootfs.tmp"/{dev,proc,sys,run,tmp,root,mnt,etc,usr,var,home}
 make -C "$arvore" O="$saida" CONFIG_PREFIX="$rootfs.tmp" install >>"$LOGS/rootfs.log" 2>&1
 rsync -a -- "$RAIZ/sistema/" "$rootfs.tmp/"
 
-# Corelabs OS Sentinel: supervisor de processos.
+# Corelabs OS Sentinel: componentes nativos de userspace.
 "$RAIZ/scripts/compilar-supervisor.sh"
+"$RAIZ/scripts/compilar-bash.sh"
 
 install -Dm0755     "$COMPILACAO/clsupervisor/clsupervisor"     "$rootfs.tmp/usr/bin/clsupervisor"
+
+install -Dm0755     "$COMPILACAO/bash/bash"     "$rootfs.tmp/bin/bash"
 mkdir -p -- "$rootfs.tmp/etc/corelabs" "$rootfs.tmp/usr/share/pixmaps"
 cp -- "$RAIZ/branding/system/ascii.txt" "$rootfs.tmp/etc/corelabs/logo.ascii"
 cp -- "$RAIZ/branding/system/oslogo.svg" "$rootfs.tmp/usr/share/pixmaps/corelabs-logo.svg"

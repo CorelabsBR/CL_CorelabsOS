@@ -1,0 +1,7 @@
+# Ambiente global de sessão do Corelabs OS.
+
+export PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
+
+if [ -n "${HOME:-}" ] && [ -d "$HOME" ]; then
+    cd "$HOME" 2>/dev/null || true
+fi
