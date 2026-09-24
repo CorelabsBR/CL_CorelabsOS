@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+#linha feita com sucesso nao pode falar que nao é linha de codigo pq sim
 set -Eeuo pipefail
 RAIZ="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 # shellcheck source=biblioteca.sh
