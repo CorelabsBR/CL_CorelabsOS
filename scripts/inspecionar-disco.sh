@@ -16,7 +16,7 @@ log="$LOGS/inspecao-disco.log"
 
 mensagem "Inspecionando partições e sistemas de arquivos sem persistir alterações"
 set +e
-{ sleep 3; printf 'echo INICIO_INSPECAO_CORELABS\nfdisk -l /dev/vda\nblkid /dev/vda*\necho FIM_INSPECAO_CORELABS\npoweroff -f\n'; } \
+{ sleep 3; printf 'echo INICIO_INSPECAO_CORELABS\nfdisk -l /dev/vda\nblkid /dev/vda*\necho FIM_INSPECAO_CORELABS\npoweroff\n'; } \
     | timeout --signal=TERM "$VM_TIMEOUT_TESTE" qemu-system-x86_64 \
         -machine q35 "${aceleracao[@]}" -m 512 -smp 1 \
         -kernel "$COMPILACAO/kernel/bzImage" -initrd "$IMAGENS/corelabs-initramfs.cpio.gz" \
@@ -28,4 +28,3 @@ codigo=$?
 set -e
 (( codigo == 0 )) || erro "inspeção terminou com código $codigo; consulte $log"
 tr -d '\r' < "$log" | sed -n '/^INICIO_INSPECAO_CORELABS$/,/^FIM_INSPECAO_CORELABS$/p'
-

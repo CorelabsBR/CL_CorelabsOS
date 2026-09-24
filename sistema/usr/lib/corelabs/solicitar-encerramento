@@ -1,0 +1,58 @@
+#!/bin/sh
+
+uso_shutdown() {
+    echo "Uso: shutdown [-h|-r] now" >&2
+    exit 2
+}
+
+comando="${0##*/}"
+operacao=
+case "$comando" in
+    reboot|poweroff|halt)
+        [ "$#" -eq 0 ] || {
+            echo "$comando: opções ainda não são suportadas" >&2
+            exit 2
+        }
+        operacao="$comando"
+        ;;
+    shutdown)
+        case "$#:$1:${2:-}" in
+            1:now:) operacao=poweroff ;;
+            2:-h:now) operacao=poweroff ;;
+            2:-r:now) operacao=reboot ;;
+            *) uso_shutdown ;;
+        esac
+        ;;
+    *)
+        echo "Solicitação de encerramento inválida." >&2
+        exit 2
+        ;;
+esac
+
+diretorio=/run/corelabs
+marcador="$diretorio/encerrando"
+pedido="$diretorio/operacao"
+[ -d "$diretorio" ] || {
+    echo "$comando: estado do Corelabs indisponível" >&2
+    exit 1
+}
+
+# mkdir fornece exclusão atômica sem exigir flock.
+if ! mkdir "$marcador" 2>/dev/null; then
+    echo "$comando: já existe uma operação de encerramento em andamento" >&2
+    exit 1
+fi
+if ! printf '%s\n' "$operacao" > "$pedido"; then
+    rmdir "$marcador" 2>/dev/null
+    echo "$comando: não foi possível registrar a operação" >&2
+    exit 1
+fi
+if ! kill -USR1 1; then
+    rm -f "$pedido"
+    rmdir "$marcador" 2>/dev/null
+    echo "$comando: não foi possível avisar o PID 1" >&2
+    exit 1
+fi
+
+echo "[Corelabs] Solicitação de $operacao enviada ao PID 1."
+exit 0

@@ -31,17 +31,16 @@ executar_boot() {
 }
 
 mensagem "Primeiro boot: criando arquivo persistente"
-executar_boot "echo $token > /root/prova-persistencia\nsync\necho GRAVACAO_PERSISTENTE_OK\npoweroff -f\n" \
+executar_boot "echo $token > /root/prova-persistencia\nsync\necho GRAVACAO_PERSISTENTE_OK\npoweroff\n" \
     "$LOGS/persistencia-gravacao.log"
 tr -d '\r' < "$LOGS/persistencia-gravacao.log" | grep -qx 'GRAVACAO_PERSISTENTE_OK' \
     || erro "o primeiro boot não confirmou a gravação"
 
 mensagem "Segundo boot: lendo o arquivo persistente"
-executar_boot "cat /root/prova-persistencia\necho LEITURA_PERSISTENTE_OK\npoweroff -f\n" \
+executar_boot "cat /root/prova-persistencia\necho LEITURA_PERSISTENTE_OK\npoweroff\n" \
     "$LOGS/persistencia-leitura.log"
 tr -d '\r' < "$LOGS/persistencia-leitura.log" | grep -qx "$token" \
     || erro "o conteúdo persistente não reapareceu no segundo boot"
 tr -d '\r' < "$LOGS/persistencia-leitura.log" | grep -qx 'LEITURA_PERSISTENTE_OK' \
     || erro "o segundo console não respondeu"
 mensagem "Persistência confirmada entre duas inicializações UEFI"
-

@@ -53,6 +53,8 @@ fi
 
 mount -t tmpfs tmpfs /run ||
     falha "não foi possível montar /run"
+mkdir -p /run/corelabs
+chmod 0755 /run/corelabs
 
 mount -t tmpfs tmpfs /tmp ||
     falha "não foi possível montar /tmp"
@@ -78,16 +80,26 @@ mostrar_banner() {
     } > "$console" 2>&1
 }
 
-iniciar_tty1() {
+supervisionar_tty1() {
+    pid_console=
+    trap '[ -z "$pid_console" ] || kill -TERM -- "-$pid_console" 2>/dev/null || kill -TERM "$pid_console" 2>/dev/null; [ -z "$pid_console" ] || wait "$pid_console" 2>/dev/null; exit 0' TERM INT HUP
     while :; do
-        getty 0 tty1 linux
+        getty 0 tty1 linux &
+        pid_console=$!
+        wait "$pid_console"
+        pid_console=
         sleep 1
     done
 }
 
-iniciar_ttyS0() {
+supervisionar_ttyS0() {
+    pid_console=
+    trap '[ -z "$pid_console" ] || kill -TERM -- "-$pid_console" 2>/dev/null || kill -TERM "$pid_console" 2>/dev/null; [ -z "$pid_console" ] || wait "$pid_console" 2>/dev/null; exit 0' TERM INT HUP
     while :; do
-        getty -L 115200 ttyS0 vt100
+        getty -L 115200 ttyS0 vt100 &
+        pid_console=$!
+        wait "$pid_console"
+        pid_console=
         sleep 1
     done
 }
@@ -101,18 +113,19 @@ iniciar_ttyS0() {
 
 echo "[Corelabs] Iniciando consoles."
 
-iniciar_tty1 &
+supervisionar_tty1 &
 PID_TTY1=$!
 
-iniciar_ttyS0 &
+supervisionar_ttyS0 &
 PID_TTYS0=$!
 
 encerrar() {
-    trap - TERM INT
+    operacao="$1"
+    trap - USR1 TERM
 
-    echo "[Corelabs] Encerramento solicitado."
+    echo "[Corelabs] Encerramento solicitado: $operacao."
 
-    kill "$PID_TTY1" "$PID_TTYS0" 2>/dev/null || true
+    kill -TERM "$PID_TTY1" "$PID_TTYS0" 2>/dev/null || true
     wait "$PID_TTY1" "$PID_TTYS0" 2>/dev/null || true
 
     if [ -x /etc/corelabs/encerramento.sh ]; then
@@ -123,16 +136,49 @@ encerrar() {
     echo "[Corelabs] Sincronizando os dados..."
     sync
 
-    echo "[Corelabs] Desligando."
-umount /tmp /run /dev/pts /sys /proc 2>/dev/null
-    poweroff -f
+    umount /tmp /dev/pts /sys /proc 2>/dev/null || true
+    umount /run 2>/dev/null || true
+
+    case "$operacao" in
+        reboot)
+            echo "[Corelabs] Reiniciando."
+            /bin/busybox reboot -f
+            ;;
+        halt)
+            echo "[Corelabs] Parando."
+            /bin/busybox halt -f
+            ;;
+        poweroff)
+            echo "[Corelabs] Desligando."
+            /bin/busybox poweroff -f
+            ;;
+    esac
 
     while :; do
         sleep 3600
     done
 }
 
-trap encerrar TERM INT
+receber_pedido() {
+    pedido=/run/corelabs/operacao
+    operacao=
+    if [ -r "$pedido" ]; then
+        IFS= read -r operacao < "$pedido" || true
+    fi
+
+    case "$operacao" in
+        poweroff|reboot|halt) encerrar "$operacao" ;;
+        *)
+            echo "[Corelabs] Solicitação de encerramento inválida." >&2
+            rm -f "$pedido"
+            rmdir /run/corelabs/encerrando 2>/dev/null || true
+            ;;
+    esac
+}
+
+# SIGUSR1 usa o pedido oficial; SIGTERM mantém o desligamento seguro como fallback.
+trap receber_pedido USR1
+trap 'encerrar poweroff' TERM
 
 while :; do
     sleep 3600 &
