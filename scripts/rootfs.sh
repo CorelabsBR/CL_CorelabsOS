@@ -62,7 +62,7 @@ mkdir -p -- "$rootfs.tmp"/{dev,proc,sys,run,tmp,root,mnt,etc,usr,var,home}
 make -C "$arvore" O="$saida" CONFIG_PREFIX="$rootfs.tmp" install >>"$LOGS/rootfs.log" 2>&1
 rsync -a -- "$RAIZ/sistema/" "$rootfs.tmp/"
 
-# Corelabs OS Sentinel: componentes nativos de userspace.
+# Corelabs OS Nexus: componentes nativos de userspace.
 "$RAIZ/scripts/compilar-supervisor.sh"
 "$RAIZ/scripts/compilar-bash.sh"
 
