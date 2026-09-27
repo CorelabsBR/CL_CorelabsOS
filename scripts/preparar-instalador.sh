@@ -41,13 +41,13 @@ mensagem "Criando carregador GRUB EFI autônomo"
 grub_cfg="$saida.tmp/grub.cfg"
 cat > "$grub_cfg" <<EOF
 serial --unit=0 --speed=115200
-terminal_input serial
-terminal_output serial
+terminal_input console serial
+terminal_output console serial
 set timeout=0
 set default=0
 menuentry 'Corelabs OS' {
     search --no-floppy --fs-uuid --set=raiz $VM_RAIZ_UUID
-    linux (\$raiz)/boot/vmlinuz-corelabs root=UUID=$VM_RAIZ_UUID rw console=ttyS0,115200
+    linux (\$raiz)/boot/vmlinuz-corelabs root=UUID=$VM_RAIZ_UUID rw console=tty0 console=ttyS0,115200
     initrd (\$raiz)/boot/initramfs-corelabs.cpio.gz
 }
 EOF

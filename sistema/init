@@ -67,6 +67,36 @@ if [ -x /etc/corelabs/inicializacao.sh ]; then
         echo "Aviso: alguns serviços falharam."
 fi
 
+if [ ! -x /usr/sbin/clcontrold ]; then
+    falha "clcontrold não está disponível"
+fi
+
+echo "[Corelabs] Iniciando controle administrativo."
+/usr/sbin/clcontrold &
+PID_CONTROLE=$!
+
+tentativas=0
+while [ ! -S /run/corelabs/control.sock ]; do
+    if ! kill -0 "$PID_CONTROLE" 2>/dev/null; then
+        wait "$PID_CONTROLE" 2>/dev/null || true
+        falha "clcontrold encerrou antes de ficar operacional"
+    fi
+
+    [ "$tentativas" -lt 50 ] ||
+        falha "clcontrold não ficou operacional a tempo"
+
+    sleep 0.1
+    tentativas=$((tentativas + 1))
+done
+
+# O socket existir não basta se o daemon morreu logo depois de criá-lo.
+if ! kill -0 "$PID_CONTROLE" 2>/dev/null; then
+    wait "$PID_CONTROLE" 2>/dev/null || true
+    falha "clcontrold encerrou durante a inicialização"
+fi
+
+echo "[Corelabs] Controle administrativo operacional."
+
 mostrar_banner() {
     console="$1"
 
@@ -80,9 +110,33 @@ mostrar_banner() {
     } > "$console" 2>&1
 }
 
+encerrar_console() {
+    pid_console="$1"
+    [ -n "$pid_console" ] || return 0
+
+    kill -TERM -- "-$pid_console" 2>/dev/null ||
+        kill -TERM "$pid_console" 2>/dev/null ||
+        return 0
+
+    tentativas=0
+    while kill -0 "$pid_console" 2>/dev/null; do
+        [ "$tentativas" -lt 10 ] || break
+        sleep 0.1
+        tentativas=$((tentativas + 1))
+    done
+
+    if kill -0 "$pid_console" 2>/dev/null; then
+        kill -KILL -- "-$pid_console" 2>/dev/null ||
+            kill -KILL "$pid_console" 2>/dev/null ||
+            true
+    fi
+
+    wait "$pid_console" 2>/dev/null || true
+}
+
 supervisionar_tty1() {
     pid_console=
-    trap '[ -z "$pid_console" ] || kill -TERM -- "-$pid_console" 2>/dev/null || kill -TERM "$pid_console" 2>/dev/null; [ -z "$pid_console" ] || wait "$pid_console" 2>/dev/null; exit 0' TERM INT HUP
+    trap 'encerrar_console "$pid_console"; exit 0' TERM INT HUP
     while :; do
         getty 0 tty1 linux &
         pid_console=$!
@@ -94,7 +148,7 @@ supervisionar_tty1() {
 
 supervisionar_ttyS0() {
     pid_console=
-    trap '[ -z "$pid_console" ] || kill -TERM -- "-$pid_console" 2>/dev/null || kill -TERM "$pid_console" 2>/dev/null; [ -z "$pid_console" ] || wait "$pid_console" 2>/dev/null; exit 0' TERM INT HUP
+    trap 'encerrar_console "$pid_console"; exit 0' TERM INT HUP
     while :; do
         getty -L 115200 ttyS0 vt100 &
         pid_console=$!
@@ -127,6 +181,9 @@ encerrar() {
 
     kill -TERM "$PID_TTY1" "$PID_TTYS0" 2>/dev/null || true
     wait "$PID_TTY1" "$PID_TTYS0" 2>/dev/null || true
+
+    kill -TERM "$PID_CONTROLE" 2>/dev/null || true
+    wait "$PID_CONTROLE" 2>/dev/null || true
 
     if [ -x /etc/corelabs/encerramento.sh ]; then
         /etc/corelabs/encerramento.sh ||

@@ -70,11 +70,25 @@ done
 
 # Corelabs OS Nexus: componentes nativos de userspace.
 "$RAIZ/scripts/compilar-supervisor.sh"
+"$RAIZ/scripts/compilar-controle.sh"
+"$RAIZ/scripts/compilar-clcontrol.sh"
 "$RAIZ/scripts/compilar-bash.sh"
 
-install -Dm0755     "$COMPILACAO/clsupervisor/clsupervisor"     "$rootfs.tmp/usr/bin/clsupervisor"
+install -Dm0755 \
+    "$COMPILACAO/clsupervisor/clsupervisor" \
+    "$rootfs.tmp/usr/bin/clsupervisor"
 
-install -Dm0755     "$COMPILACAO/bash/bash"     "$rootfs.tmp/bin/bash"
+install -Dm0755 \
+    "$COMPILACAO/clcontrold/clcontrold" \
+    "$rootfs.tmp/usr/sbin/clcontrold"
+
+install -Dm0755 \
+    "$COMPILACAO/clcontrol/clcontrol" \
+    "$rootfs.tmp/usr/bin/clcontrol"
+
+install -Dm0755 \
+    "$COMPILACAO/bash/bash" \
+    "$rootfs.tmp/bin/bash"
 mkdir -p -- "$rootfs.tmp/etc/corelabs" "$rootfs.tmp/usr/share/pixmaps"
 cp -- "$RAIZ/branding/system/ascii.txt" "$rootfs.tmp/etc/corelabs/logo.ascii"
 cp -- "$RAIZ/branding/system/oslogo.svg" "$rootfs.tmp/usr/share/pixmaps/corelabs-logo.svg"

@@ -33,3 +33,14 @@ fontes/clsupervisor/*.pre-*
 /compilacao/
 /imagens/
 /logs/
+# Corelabs Control: código-fonte próprio.
+!/fontes/clcontrold/
+!/fontes/clcontrold/*.c
+!/fontes/clcontrold/*.h
+!/fontes/clcontrold/*.md
+
+# Corelabs Control Client: código-fonte próprio.
+!/fontes/clcontrol/
+!/fontes/clcontrol/*.c
+!/fontes/clcontrol/*.h
+!/fontes/clcontrol/*.md

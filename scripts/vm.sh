@@ -37,7 +37,14 @@ else
 fi
 
 video=(-display none)
-(( grafico )) && video=(-display gtk)
+if (( grafico )); then
+    video=(
+        -device virtio-vga
+        -device qemu-xhci
+        -device usb-tablet
+        -display gtk,grab-on-hover=off
+    )
+fi
 mensagem "Inicializando Corelabs OS (${VM_CPUS} vCPUs, ${VM_MEMORIA_MB} MB)"
 comum=(-name "$VM_NOME" -machine q35 "${aceleracao[@]}" -m "$VM_MEMORIA_MB" -smp "$VM_CPUS"
     -drive "if=none,file=$disco,format=qcow2,id=disco0" -device virtio-blk-pci,drive=disco0
