@@ -45,7 +45,7 @@ verificar_hash "$FONTES/busybox-$BUSYBOX_VERSAO.tar.bz2" "$BUSYBOX_SHA256"
 
 kernel="$COMPILACAO/kernel/bzImage"
 initramfs="$IMAGENS/corelabs-initramfs.cpio.gz"
-disco="$MAQUINAS/corelabs.qcow2"
+disco="$MAQUINAS/$VM_DISCO"
 [[ -s "$kernel" ]] && file "$kernel" | grep -q 'Linux kernel x86 boot executable' \
     && ok "kernel x86 válido" || falhou "kernel compilado inválido ou ausente"
 if [[ -s "$initramfs" ]] && gzip -t "$initramfs"; then

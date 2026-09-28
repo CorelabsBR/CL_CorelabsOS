@@ -20,7 +20,11 @@ exigir_comando qemu-system-x86_64
 
 kernel="$COMPILACAO/kernel/bzImage"
 initramfs="$IMAGENS/corelabs-initramfs.cpio.gz"
-disco="$MAQUINAS/corelabs.qcow2"
+[[ "$VM_DISCO" == "$(basename -- "$VM_DISCO")" ]] ||
+    erro "VM_DISCO deve conter apenas o nome do arquivo"
+
+disco="$MAQUINAS/$VM_DISCO"
+marcador="$MAQUINAS/.${VM_DISCO%.qcow2}-instalado"
 if [[ ! -s "$kernel" || ! -s "$initramfs" ]]; then
     mensagem "Artefatos ausentes; iniciando compilação automática"
     "$RAIZ/corelabs.sh" compilar
@@ -55,7 +59,7 @@ if (( recuperacao )); then
         -append "console=ttyS0,115200 rdinit=/init panic=-1"
 fi
 
-[[ -f "$MAQUINAS/.corelabs-instalado" ]] || erro "sistema não instalado; execute ./corelabs.sh instalar"
+[[ -f "$marcador" ]] || erro "sistema não instalado; execute ./corelabs.sh instalar"
 "$RAIZ/scripts/preparar-uefi.sh"
 mensagem "Boot UEFI a partir do disco persistente"
 exec qemu-system-x86_64 "${comum[@]}" \

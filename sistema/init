@@ -62,6 +62,12 @@ mount -t tmpfs tmpfs /tmp ||
 hostname -F /etc/hostname 2>/dev/null ||
     hostname corelabs
 
+if [ -x /usr/lib/corelabs/rede/iniciar ]; then
+    echo "[Corelabs] Inicializando rede."
+    /usr/lib/corelabs/rede/iniciar ||
+        echo "[Corelabs] Aviso: inicialização da rede apresentou falhas."
+fi
+
 if [ -x /etc/corelabs/inicializacao.sh ]; then
     /etc/corelabs/inicializacao.sh ||
         echo "Aviso: alguns serviços falharam."

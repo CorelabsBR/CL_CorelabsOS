@@ -6,7 +6,10 @@ source "$RAIZ/scripts/biblioteca.sh"
 # shellcheck source=../configuracao/vm.conf
 source "$RAIZ/configuracao/vm.conf"
 
-[[ -f "$MAQUINAS/.corelabs-instalado" ]] || erro "sistema ainda não instalado; execute ./corelabs.sh instalar"
+disco="$MAQUINAS/$VM_DISCO"
+marcador="$MAQUINAS/.${VM_DISCO%.qcow2}-instalado"
+
+[[ -f "$marcador" ]] || erro "sistema ainda não instalado; execute ./corelabs.sh instalar"
 for comando in qemu-system-x86_64 timeout; do exigir_comando "$comando"; done
 "$RAIZ/scripts/preparar-uefi.sh"
 
@@ -21,7 +24,7 @@ executar_boot() {
         qemu-system-x86_64 -machine q35 "${aceleracao[@]}" -m 1024 -smp 2 \
         -drive "if=pflash,format=raw,readonly=on,file=$OVMF_CODE" \
         -drive "if=pflash,format=raw,file=$MAQUINAS/OVMF_VARS.fd" \
-        -drive "if=none,file=$MAQUINAS/corelabs.qcow2,format=qcow2,id=disco0" \
+        -drive "if=none,file=$disco,format=qcow2,id=disco0" \
         -device virtio-blk-pci,drive=disco0 -netdev user,id=rede0 \
         -device virtio-net-pci,netdev=rede0 -serial stdio -display none -no-reboot \
         > "$log" 2>&1
