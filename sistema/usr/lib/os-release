@@ -1,10 +1,10 @@
-PRETTY_NAME="Corelabs OS 0.4 Sentinel"
+PRETTY_NAME="Corelabs OS 0.5 Nexus"
 NAME="Corelabs OS"
-VERSION_ID="0.4"
-VERSION="0.4 (Sentinel)"
-VERSION_CODENAME=sentinel
+VERSION_ID="0.5"
+VERSION="0.5 (Nexus)"
+VERSION_CODENAME=nexus
 ID=corelabs
-BUILD_ID=20260923
+BUILD_ID=20260924
 ANSI_COLOR="0;31"
 HOME_URL="https://corelabs.dev.br/"
 SUPPORT_URL="https://corelabs.dev.br/contato/"

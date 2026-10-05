@@ -7,12 +7,16 @@ source "$RAIZ/scripts/biblioteca.sh"
 source "$RAIZ/configuracao/vm.conf"
 
 (( EUID != 0 )) || erro "o instalador não deve ser executado como root"
-for comando in qemu-system-x86_64 qemu-img timeout; do exigir_comando "$comando"; done
-disco="$MAQUINAS/corelabs.qcow2"
+for comando in qemu-system-x86_64 qemu-img timeout tee; do exigir_comando "$comando"; done
+[[ "$VM_DISCO" == "$(basename -- "$VM_DISCO")" ]] ||
+    erro "VM_DISCO deve conter apenas o nome do arquivo"
+
+disco="$MAQUINAS/$VM_DISCO"
+marcador="$MAQUINAS/.${VM_DISCO%.qcow2}-instalado"
 [[ -f "$disco" ]] || "$RAIZ/scripts/imagem.sh"
 qemu-img info --output=json "$disco" | grep -q '"format": "qcow2"' \
     || erro "o alvo não é uma imagem QCOW2"
-[[ "$(realpath -- "$disco")" == "$RAIZ/maquinas/corelabs.qcow2" ]] \
+[[ "$(realpath -- "$disco")" == "$(realpath -m -- "$MAQUINAS/$VM_DISCO")" ]] \
     || erro "alvo fora do caminho permitido"
 
 "$RAIZ/scripts/preparar-instalador.sh"
@@ -34,11 +38,11 @@ timeout --signal=TERM "$VM_TIMEOUT_TESTE" qemu-system-x86_64 \
     -append "console=ttyS0,115200 rdinit=/init corelabs.instalar=SIM" \
     -drive "if=none,file=$disco,format=qcow2,id=alvo" \
     -device virtio-blk-pci,drive=alvo -serial stdio -display none -no-reboot \
-    > "$log" 2>&1
-codigo=$?
+    2>&1 | tee "$log"
+codigo=${PIPESTATUS[0]}
 set -e
 if (( codigo == 0 )) && grep -q '^CORELABS_INSTALACAO_OK' "$log"; then
-    printf '%s\n' "$VM_RAIZ_UUID" > "$MAQUINAS/.corelabs-instalado"
+    printf '%s\n' "$VM_RAIZ_UUID" > "$marcador"
     mensagem "Instalação concluída no disco virtual"
 else
     erro "instalação falhou com código $codigo; consulte $log"

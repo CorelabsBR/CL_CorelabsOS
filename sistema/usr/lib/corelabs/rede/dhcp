@@ -1,0 +1,133 @@
+#!/bin/sh
+
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+interface="${interface:-}"
+evento="${1:-}"
+
+[ -n "$interface" ] || {
+    echo "[Rede] DHCP: interface não informada." >&2
+    exit 1
+}
+
+prefixo_da_mascara() {
+    mascara="$1"
+    prefixo=0
+
+    antigo_ifs=$IFS
+    IFS=.
+    set -- $mascara
+    IFS=$antigo_ifs
+
+    [ "$#" -eq 4 ] || return 1
+
+    encontrou_parcial=0
+    for octeto in "$@"; do
+        case "$octeto" in
+            255) bits=8 ;;
+            254) bits=7 ;;
+            252) bits=6 ;;
+            248) bits=5 ;;
+            240) bits=4 ;;
+            224) bits=3 ;;
+            192) bits=2 ;;
+            128) bits=1 ;;
+            0)   bits=0 ;;
+            *) return 1 ;;
+        esac
+        if [ "$encontrou_parcial" -eq 1 ] && [ "$bits" -ne 0 ]; then
+            return 1
+        fi
+        [ "$bits" -eq 8 ] || encontrou_parcial=1
+        prefixo=$((prefixo + bits))
+    done
+
+    printf '%s\n' "$prefixo"
+}
+
+ipv4_valido() {
+    endereco="$1"
+    antigo_ifs=$IFS
+    IFS=.
+    set -- $endereco
+    IFS=$antigo_ifs
+    [ "$#" -eq 4 ] || return 1
+    for octeto in "$@"; do
+        case "$octeto" in
+            ''|*[!0-9]*) return 1 ;;
+        esac
+        [ "$octeto" -le 255 ] || return 1
+    done
+}
+
+atualizar_dns() {
+    temporario="/run/corelabs/resolv.conf.$$"
+
+    {
+        echo "# Gerado automaticamente pelo DHCP do Corelabs OS."
+        for servidor in ${dns:-}; do
+            ipv4_valido "$servidor" || continue
+            echo "nameserver $servidor"
+        done
+    } > "$temporario" || return 1
+
+    mv "$temporario" /etc/resolv.conf
+}
+
+case "$evento" in
+    deconfig)
+        ip addr flush dev "$interface" scope global 2>/dev/null || true
+        ;;
+
+    bound|renew)
+        [ -n "${ip:-}" ] || {
+            echo "[Rede] DHCP: endereço IPv4 ausente." >&2
+            exit 1
+        }
+
+        prefixo=32
+        if [ -n "${subnet:-}" ]; then
+            prefixo="$(prefixo_da_mascara "$subnet")" || {
+                echo "[Rede] DHCP: máscara inválida: $subnet" >&2
+                exit 1
+            }
+        fi
+
+        ip addr flush dev "$interface" scope global 2>/dev/null || true
+        ipv4_valido "$ip" || {
+            echo "[Rede] DHCP: endereço IPv4 inválido." >&2
+            exit 1
+        }
+
+        argumentos_endereco="$ip/$prefixo"
+        if [ -n "${broadcast:-}" ] && ipv4_valido "$broadcast"; then
+            ip addr add "$argumentos_endereco" broadcast "$broadcast" dev "$interface" ||
+                exit 1
+        else
+            ip addr add "$argumentos_endereco" dev "$interface" ||
+                exit 1
+        fi
+
+        ip route del default dev "$interface" 2>/dev/null || true
+
+        for gateway in ${router:-}; do
+            ipv4_valido "$gateway" || continue
+            if ip route add default via "$gateway" dev "$interface"; then
+                break
+            fi
+        done
+
+        atualizar_dns || {
+            echo "[Rede] DHCP: não foi possível atualizar DNS." >&2
+            exit 1
+        }
+
+        echo "[Rede] DHCP: $interface configurada com $ip/$prefixo."
+        ;;
+
+    *)
+        # Eventos que não alteram a configuração são ignorados.
+        ;;
+esac
+
+exit 0

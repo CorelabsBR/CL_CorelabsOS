@@ -1,91 +1,25 @@
 #!/bin/sh
 
-export PATH=/sbin:/bin:/usr/sbin:/usr/bin
-
-diretorio=/etc/corelabs/servicos
-
-[ ! -r /usr/lib/corelabs/registro.sh ] ||
-    . /usr/lib/corelabs/registro.sh
-
-registrar() {
-    command -v corelabs_registrar >/dev/null 2>&1 ||
-        return 0
-
-    corelabs_registrar "SERVICO" "$1" "servicos.log" ||
-        echo "[Corelabs] Aviso: falha ao registrar operação." >&2
-}
-
 uso() {
-    echo "Uso: clservice {start|stop|restart|status|list} [serviço]"
+    echo "Uso: clservice {start|stop|restart|status|list} [serviço]" >&2
     exit 2
 }
 
 [ "$#" -ge 1 ] || uso
-
 acao="$1"
-nome="${2:-}"
-
 case "$acao" in
     list)
-        for servico in "$diretorio"/*; do
+        [ "$#" -eq 1 ] || uso
+        for servico in /etc/corelabs/servicos/*; do
             [ -f "$servico" ] || continue
             [ -x "$servico" ] || continue
-
-            case "$servico" in
-                *.disabled) continue ;;
-            esac
-
+            case "$servico" in *.disabled) continue ;; esac
             echo "${servico##*/}"
         done
-        exit 0
         ;;
-
     start|stop|restart|status)
-        [ -n "$nome" ] || uso
+        [ "$#" -eq 2 ] || uso
+        exec /usr/sbin/service "$2" "$acao"
         ;;
-
-    *)
-        uso
-        ;;
+    *) uso ;;
 esac
-
-case "$nome" in
-    *[!a-zA-Z0-9_.-]*|.|..|*.disabled)
-        echo "Nome de serviço inválido." >&2
-        exit 2
-        ;;
-esac
-
-servico="$diretorio/$nome"
-
-[ -f "$servico" ] && [ -x "$servico" ] || {
-    echo "Serviço não encontrado: $nome" >&2
-    exit 1
-}
-
-registrar "Solicitado: $acao $nome"
-
-case "$acao" in
-    restart)
-        "$servico" stop
-        resultado=$?
-
-        if [ "$resultado" -eq 0 ]; then
-            "$servico" start
-            resultado=$?
-        fi
-        ;;
-
-    *)
-        "$servico" "$acao"
-        resultado=$?
-        ;;
-esac
-
-if [ "$resultado" -eq 0 ]; then
-    registrar "Concluído: $acao $nome"
-else
-    registrar "Falha: $acao $nome (código $resultado)"
-fi
-
-exit "$resultado"

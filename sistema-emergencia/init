@@ -1,0 +1,48 @@
+#!/bin/sh
+
+export PATH=/sbin:/bin
+export HOME=/root
+export PS1='CMS
+# '
+
+echo
+echo "Corelabs OS 0.5 Nexus"
+echo "Corelabs Emergency Shell"
+echo
+
+mkdir -p /proc /sys /dev /dev/pts /run /mnt/root
+
+mount -t proc proc /proc ||
+    echo "[Emergency] AVISO: não foi possível montar /proc."
+
+mount -t sysfs sysfs /sys ||
+    echo "[Emergency] AVISO: não foi possível montar /sys."
+
+mount -t devtmpfs devtmpfs /dev ||
+    echo "[Emergency] AVISO: não foi possível montar /dev."
+
+mkdir -p /dev/pts
+mount -t devpts devpts /dev/pts 2>/dev/null || true
+
+mdev -s 2>/dev/null || true
+
+echo "[Emergency] Ambiente mínimo inicializado."
+echo
+echo "Ferramentas disponíveis:"
+echo "  blkid"
+echo "  fdisk -l"
+echo "  fsck"
+echo "  mount / umount"
+echo "  dmesg"
+echo "  cat /proc/cmdline"
+echo "  reboot -f"
+echo "  poweroff -f"
+echo
+echo "A raiz instalada NÃO foi montada automaticamente."
+echo "Ponto de montagem reservado: /mnt/root"
+echo
+
+exec setsid cttyhack /bin/sh
+
+echo "[Emergency] Falha ao iniciar shell."
+reboot -f

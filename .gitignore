@@ -33,3 +33,30 @@ fontes/clsupervisor/*.pre-*
 /compilacao/
 /imagens/
 /logs/
+
+# Código próprio do validador/transações CPM.
+!/fontes/cpm/
+!/fontes/cpm/*.c
+# Corelabs Control: código-fonte próprio.
+!/fontes/clcontrold/
+!/fontes/clcontrold/*.c
+!/fontes/clcontrold/*.h
+!/fontes/clcontrold/*.md
+
+# Corelabs Control Client: código-fonte próprio.
+!/fontes/clcontrol/
+!/fontes/clcontrol/*.c
+!/fontes/clcontrol/*.h
+!/fontes/clcontrol/*.md
+
+# Corelabs Control: código-fonte próprio.
+!/fontes/clcontrold/
+!/fontes/clcontrold/*.c
+!/fontes/clcontrold/*.h
+!/fontes/clcontrold/*.md
+
+# Corelabs Control Client: código-fonte próprio.
+!/fontes/clcontrol/
+!/fontes/clcontrol/*.c
+!/fontes/clcontrol/*.h
+!/fontes/clcontrol/*.md

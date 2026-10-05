@@ -9,7 +9,7 @@ source "$RAIZ/configuracao/vm.conf"
 exigir_comando qemu-img
 [[ "$VM_DISCO_GB" =~ ^[1-9][0-9]*$ ]] || erro "VM_DISCO_GB inválido em configuracao/vm.conf"
 mkdir -p -- "$MAQUINAS"
-disco="$MAQUINAS/corelabs.qcow2"
+disco="$MAQUINAS/$VM_DISCO"
 if [[ -e "$disco" ]]; then
     mensagem "Disco persistente preservado: $disco"
     exit 0

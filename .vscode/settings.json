@@ -1,0 +1,15 @@
+{
+    "C_Cpp.files.exclude": {
+        "**/compilacao": true,
+        "**/fontes/gcc-*": true,
+        "**/fontes/binutils-*": true,
+        "**/fontes/glibc-*": true,
+        "**/fontes/coreutils-*": true,
+        "**/fontes/gmp-*": true,
+        "**/fontes/mpfr-*": true,
+        "**/fontes/mpc-*": true
+    },
+    "files.watcherExclude": {
+        "**/compilacao/**": true
+    }
+}

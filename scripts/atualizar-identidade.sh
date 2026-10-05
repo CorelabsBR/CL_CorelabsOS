@@ -7,7 +7,10 @@ source "$RAIZ/scripts/biblioteca.sh"
 source "$RAIZ/configuracao/vm.conf"
 
 (( EUID != 0 )) || erro "a atualização não deve ser executada como root"
-[[ -f "$MAQUINAS/.corelabs-instalado" ]] || erro "sistema persistente não instalado"
+disco="${CORELABS_DISCO:-$MAQUINAS/$VM_DISCO}"
+marcador="$MAQUINAS/.${VM_DISCO%.qcow2}-instalado"
+
+[[ -f "$marcador" ]] || erro "sistema persistente não instalado"
 "$RAIZ/scripts/preparar-atualizacao-identidade.sh"
 
 aceleracao=(-accel tcg,thread=multi -cpu max)
@@ -18,7 +21,7 @@ timeout --signal=TERM "$VM_TIMEOUT_TESTE" qemu-system-x86_64 \
     -machine q35 "${aceleracao[@]}" -m 512 -smp 1 \
     -kernel "$COMPILACAO/kernel/bzImage" -initrd "$IMAGENS/corelabs-atualizacao-identidade.cpio.gz" \
     -append "console=ttyS0,115200 earlycon=uart,io,0x3f8,115200 loglevel=4 rdinit=/init" \
-    -drive "if=none,file=${CORELABS_DISCO:-$MAQUINAS/corelabs.qcow2},format=qcow2,id=disco0" \
+    -drive "if=none,file=$disco,format=qcow2,id=disco0" \
     -device virtio-blk-pci,drive=disco0 -serial "file:$log" -display none -no-reboot
 codigo=$?
 set -e
