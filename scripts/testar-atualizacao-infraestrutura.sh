@@ -53,7 +53,7 @@ qemu-img check "$DISCO"
 mkdir -p "$LOGS"
 : > "$LOG"
 
-echo "[Corelabs] Atualizando exclusivamente a imagem de teste..."
+echo "[Lithos] Atualizando exclusivamente a imagem de teste..."
 
 set +e
 
@@ -65,7 +65,7 @@ timeout --signal=TERM 120 \
     -m 512 \
     -smp 1 \
     -kernel "$COMPILACAO/kernel/bzImage" \
-    -initrd "$IMAGENS/corelabs-atualizacao-infraestrutura.cpio.gz" \
+    -initrd "$IMAGENS/Lithos-atualizacao-infraestrutura.cpio.gz" \
     -append "console=ttyS0,115200 loglevel=4 rdinit=/init" \
     -drive "if=none,file=$DISCO,format=qcow2,id=disco0" \
     -device virtio-blk-pci,drive=disco0 \
@@ -80,7 +80,7 @@ set -e
 echo "===== LOG ====="
 tail -n 35 "$LOG"
 
-if ! grep -q '^CORELABS_INFRAESTRUTURA_ATUALIZADA_OK' "$LOG"; then
+if ! grep -q '^Lithos_INFRAESTRUTURA_ATUALIZADA_OK' "$LOG"; then
     echo "ERRO: atualização não confirmada." >&2
     exit 1
 fi
@@ -92,4 +92,4 @@ fi
 
 qemu-img check "$DISCO"
 
-echo "[Corelabs] Atualização concluída na imagem de teste."
+echo "[Lithos] Atualização concluída na imagem de teste."

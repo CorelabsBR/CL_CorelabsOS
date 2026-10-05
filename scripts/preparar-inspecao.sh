@@ -11,12 +11,12 @@ for comando in cpio gzip; do
 done
 
 busybox="$COMPILACAO/rootfs/bin/busybox"
-destino="$IMAGENS/corelabs-inspecao.cpio.gz"
+destino="$IMAGENS/Lithos-inspecao.cpio.gz"
 ambiente="$COMPILACAO/inspecao"
 temporario="${destino}.tmp"
 
 [[ -x "$busybox" ]] ||
-    erro "BusyBox do rootfs ausente; execute ./corelabs.sh rootfs"
+    erro "BusyBox do rootfs ausente; execute ./Lithos.sh rootfs"
 
 mensagem "Preparando ambiente mínimo de inspeção"
 
@@ -49,7 +49,7 @@ falha() {
     codigo="$1"
     shift
 
-    echo "ERRO_INSPECAO_CORELABS: $*"
+    echo "ERRO_INSPECAO_Lithos: $*"
     sync
     /bin/busybox poweroff -f
     exit "$codigo"
@@ -64,7 +64,7 @@ mount -t sysfs sysfs /sys ||
 mount -t devtmpfs devtmpfs /dev ||
     falha 12 "não foi possível montar /dev"
 
-echo "INICIO_INSPECAO_CORELABS"
+echo "INICIO_INSPECAO_Lithos"
 
 if [ ! -b /dev/vda ]; then
     falha 20 "/dev/vda não está disponível"
@@ -76,9 +76,9 @@ resultado_fdisk=$?
 blkid /dev/vda /dev/vda*
 resultado_blkid=$?
 
-echo "RESULTADO_FDISK_CORELABS=$resultado_fdisk"
-echo "RESULTADO_BLKID_CORELABS=$resultado_blkid"
-echo "FIM_INSPECAO_CORELABS"
+echo "RESULTADO_FDISK_Lithos=$resultado_fdisk"
+echo "RESULTADO_BLKID_Lithos=$resultado_blkid"
+echo "FIM_INSPECAO_Lithos"
 
 sync
 

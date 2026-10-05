@@ -65,10 +65,10 @@ rsync -a -- "$RAIZ/sistema/" "$rootfs.tmp/"
 # Substitui somente as interfaces administrativas que precisam passar pelo PID 1.
 for comando in shutdown reboot poweroff halt; do
     rm -f -- "$rootfs.tmp/sbin/$comando"
-    ln -s ../usr/lib/corelabs/solicitar-encerramento "$rootfs.tmp/sbin/$comando"
+    ln -s ../usr/lib/Lithos/solicitar-encerramento "$rootfs.tmp/sbin/$comando"
 done
 
-# Corelabs OS Nexus: componentes nativos de userspace.
+# Lithos Nexus: componentes nativos de userspace.
 "$RAIZ/scripts/compilar-supervisor.sh"
 "$RAIZ/scripts/compilar-controle.sh"
 "$RAIZ/scripts/compilar-clcontrol.sh"
@@ -117,6 +117,12 @@ install -Dm0755 \
     "$COMPILACAO/curl/usr/bin/curl" \
     "$rootfs.tmp/usr/bin/curl"
 
+# Verificador criptográfico usado pela cadeia de confiança do CPM. É a CLI
+# estática do mesmo OpenSSL fixado usado pelo curl; não instala chave privada.
+install -Dm0755 \
+    "$COMPILACAO/openssl/usr/bin/openssl" \
+    "$rootfs.tmp/usr/bin/openssl"
+
 bundle="$FONTES/cacert-$CA_BUNDLE_SHA256.pem"
 baixar_verificado "$CA_BUNDLE_URL" "$bundle" "$CA_BUNDLE_SHA256"
 install -Dm0644 \
@@ -124,21 +130,26 @@ install -Dm0644 \
     "$rootfs.tmp/etc/ssl/certs/ca-certificates.crt"
 
 chmod 0440 "$rootfs.tmp/etc/sudoers"
+chmod 0600 "$rootfs.tmp/etc/shadow"
+chmod 0644 "$rootfs.tmp/etc/passwd" "$rootfs.tmp/etc/group" \
+    "$rootfs.tmp/etc/cpm/repos.d/Lithos.repo"
 install -Dm0755 "$COMPILACAO/cpm/arquivo" "$rootfs.tmp/usr/libexec/cpm/arquivo"
 chmod 0755 "$rootfs.tmp/usr/bin/cpm"
 mkdir -p "$rootfs.tmp/etc/cpm/keyrings"
+chmod 0755 "$rootfs.tmp/etc/cpm" "$rootfs.tmp/etc/cpm/keyrings" "$rootfs.tmp/etc/cpm/repos.d"
 mkdir -p -- "$rootfs.tmp/var/lib/sudo" "$rootfs.tmp/var/log/sudo-io"
 chmod 0700 "$rootfs.tmp/var/lib/sudo" "$rootfs.tmp/var/log/sudo-io"
-mkdir -p -- "$rootfs.tmp/etc/corelabs" "$rootfs.tmp/usr/share/pixmaps"
-cp -- "$RAIZ/branding/system/ascii.txt" "$rootfs.tmp/etc/corelabs/logo.ascii"
-cp -- "$RAIZ/branding/system/oslogo.svg" "$rootfs.tmp/usr/share/pixmaps/corelabs-logo.svg"
+mkdir -p -- "$rootfs.tmp/etc/Lithos" "$rootfs.tmp/usr/share/pixmaps"
+cp -- "$RAIZ/branding/system/ascii.txt" "$rootfs.tmp/etc/Lithos/logo.ascii"
+cp -- "$RAIZ/branding/system/oslogo.svg" "$rootfs.tmp/usr/share/pixmaps/Lithos-logo.svg"
 chmod 0755 "$rootfs.tmp/init"
-chmod 0755 "$rootfs.tmp/usr/lib/corelabs/banner"
+chmod 0755 "$rootfs.tmp/usr/lib/Lithos/banner"
 # rsync preserva modos do checkout; um umask 0002 não deve produzir ancestrais
 # graváveis por grupo na raiz instalada (inclusive a própria raiz).
 find "$rootfs.tmp" -type d -exec chmod go-w {} +
 chmod 1777 "$rootfs.tmp/tmp"
 "$RAIZ/scripts/auditar-elf.sh" "$rootfs.tmp"
+"$RAIZ/scripts/auditar-seguranca.sh" "$rootfs.tmp"
 rm -rf -- "$rootfs"
 mv -- "$rootfs.tmp" "$rootfs"
 mensagem "Rootfs montado em $rootfs"

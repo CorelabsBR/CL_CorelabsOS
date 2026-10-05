@@ -5,8 +5,8 @@ RAIZ="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 
 source "$RAIZ/scripts/biblioteca.sh"
 
-DISCO="$RAIZ/maquinas/testes/corelabs-sentinel.qcow2"
-PACOTE="$IMAGENS/corelabs-atualizacao-sentinel.cpio.gz"
+DISCO="$RAIZ/maquinas/testes/Lithos-sentinel.qcow2"
+PACOTE="$IMAGENS/Lithos-atualizacao-sentinel.cpio.gz"
 LOG="$LOGS/instalacao-sentinel.log"
 
 [[ $EUID -ne 0 ]] || {
@@ -31,7 +31,7 @@ done
     exit 1
 }
 
-[[ -f "$RAIZ/maquinas/testes/corelabs-sentinel-pre-instalacao.qcow2" ]] || {
+[[ -f "$RAIZ/maquinas/testes/Lithos-sentinel-pre-instalacao.qcow2" ]] || {
     echo "ERRO: cópia de segurança não encontrada."
     exit 1
 }
@@ -69,7 +69,7 @@ echo
 echo "===== LOG DA INSTALAÇÃO ====="
 tail -n 40 "$LOG"
 
-if ! grep -q '^CORELABS_SENTINEL_ATUALIZADA_OK' "$LOG"; then
+if ! grep -q '^Lithos_SENTINEL_ATUALIZADA_OK' "$LOG"; then
     echo "ERRO: instalação não confirmada."
     exit 1
 fi

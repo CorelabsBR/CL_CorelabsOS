@@ -1,14 +1,14 @@
 #!/bin/sh
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin
-diretorio=/etc/corelabs/servicos
+diretorio=/etc/Lithos/servicos
 
-[ ! -r /usr/lib/corelabs/registro.sh ] || . /usr/lib/corelabs/registro.sh
+[ ! -r /usr/lib/Lithos/registro.sh ] || . /usr/lib/Lithos/registro.sh
 
 registrar() {
-    command -v corelabs_registrar >/dev/null 2>&1 || return 0
-    corelabs_registrar "SERVICO" "$1" "servicos.log" ||
-        echo "[Corelabs] Aviso: falha ao registrar operação." >&2
+    command -v Lithos_registrar >/dev/null 2>&1 || return 0
+    Lithos_registrar "SERVICO" "$1" "servicos.log" ||
+        echo "[Lithos] Aviso: falha ao registrar operação." >&2
 }
 
 uso() {

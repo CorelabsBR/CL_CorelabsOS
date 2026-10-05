@@ -7,10 +7,10 @@ raiz_uuid="@RAIZ_UUID@"
 assinatura_esperada="@ASSINATURA_INIT@"
 
 alvo=/alvo
-pacote=/opt/corelabs-infraestrutura
+pacote=/opt/Lithos-infraestrutura
 
 falha() {
-    echo "[Corelabs] ERRO: $*" >&2
+    echo "[Lithos] ERRO: $*" >&2
     exec sh
 }
 
@@ -23,10 +23,10 @@ mdev -s || falha "detecção dos dispositivos"
 
 for arquivo in \
     "$pacote/init" \
-    "$pacote/etc/corelabs/inicializacao.sh" \
-    "$pacote/etc/corelabs/encerramento.sh" \
-    "$pacote/etc/corelabs/servicos/01-diretorios" \
-    "$pacote/usr/lib/corelabs/registro.sh" \
+    "$pacote/etc/Lithos/inicializacao.sh" \
+    "$pacote/etc/Lithos/encerramento.sh" \
+    "$pacote/etc/Lithos/servicos/01-diretorios" \
+    "$pacote/usr/lib/Lithos/registro.sh" \
     "$pacote/usr/bin/clservice"     "$pacote/usr/lib/os-release"     "$pacote/etc/motd"
 do
     [ -s "$arquivo" ] || falha "arquivo ausente: $arquivo"
@@ -62,36 +62,36 @@ if [ "$assinatura_atual" != "$assinatura_esperada" ] &&
     falha "PID 1 desconhecido; atualização recusada"
 fi
 
-mkdir -p "$alvo/etc/corelabs/servicos" ||
+mkdir -p "$alvo/etc/Lithos/servicos" ||
     falha "criação dos diretórios"
 
 # Instalar a biblioteca antes de iniciar os serviços.
-mkdir -p "$alvo/usr/lib/corelabs" ||
+mkdir -p "$alvo/usr/lib/Lithos" ||
     falha "diretório das bibliotecas"
 
-cp "$pacote/usr/lib/corelabs/registro.sh"    "$alvo/usr/lib/corelabs/registro.sh" ||
+cp "$pacote/usr/lib/Lithos/registro.sh"    "$alvo/usr/lib/Lithos/registro.sh" ||
     falha "instalação da biblioteca de registros"
 
-chmod 0644 "$alvo/usr/lib/corelabs/registro.sh" ||
+chmod 0644 "$alvo/usr/lib/Lithos/registro.sh" ||
     falha "permissões da biblioteca"
 
 # Instalar os serviços antes de ativar o novo PID 1.
-cp "$pacote/etc/corelabs/inicializacao.sh" \
-   "$alvo/etc/corelabs/inicializacao.sh" ||
+cp "$pacote/etc/Lithos/inicializacao.sh" \
+   "$alvo/etc/Lithos/inicializacao.sh" ||
     falha "instalação do executor"
 
-cp "$pacote/etc/corelabs/encerramento.sh" \
-   "$alvo/etc/corelabs/encerramento.sh" ||
+cp "$pacote/etc/Lithos/encerramento.sh" \
+   "$alvo/etc/Lithos/encerramento.sh" ||
     falha "instalação do encerramento"
 
-cp "$pacote/etc/corelabs/servicos/01-diretorios" \
-   "$alvo/etc/corelabs/servicos/01-diretorios" ||
+cp "$pacote/etc/Lithos/servicos/01-diretorios" \
+   "$alvo/etc/Lithos/servicos/01-diretorios" ||
     falha "instalação do serviço"
 
 chmod 0755 \
-    "$alvo/etc/corelabs/inicializacao.sh" \
-    "$alvo/etc/corelabs/encerramento.sh" \
-    "$alvo/etc/corelabs/servicos/01-diretorios" ||
+    "$alvo/etc/Lithos/inicializacao.sh" \
+    "$alvo/etc/Lithos/encerramento.sh" \
+    "$alvo/etc/Lithos/servicos/01-diretorios" ||
     falha "permissões dos serviços"
 
 # Instalar o gerenciador e atualizar a identidade.
@@ -110,13 +110,13 @@ cp "$pacote/usr/lib/os-release" "$alvo/usr/lib/os-release" ||
 
 # Preservar mensagens personalizadas.
 if [ ! -e "$alvo/etc/motd" ] ||
-   grep -Fq 'Corelabs OS 0.2 Genesis' "$alvo/etc/motd" ||
+   grep -Fq 'Lithos 0.2 Genesis' "$alvo/etc/motd" ||
    grep -Fq 'Sistema persistente experimental' "$alvo/etc/motd"; then
 
     cp "$pacote/etc/motd" "$alvo/etc/motd" ||
         falha "atualização da mensagem"
 else
-    echo "[Corelabs] MOTD personalizado preservado."
+    echo "[Lithos] MOTD personalizado preservado."
 fi
 
 # A substituição do PID 1 é a última alteração.
@@ -134,6 +134,6 @@ fi
 sync || falha "sincronização"
 umount "$alvo" || falha "desmontagem"
 
-echo "CORELABS_INFRAESTRUTURA_ATUALIZADA_OK"
+echo "Lithos_INFRAESTRUTURA_ATUALIZADA_OK"
 
 poweroff -f

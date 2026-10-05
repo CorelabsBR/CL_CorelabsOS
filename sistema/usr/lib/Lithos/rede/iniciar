@@ -2,8 +2,8 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
-script_dhcp=/usr/lib/corelabs/rede/dhcp
-pid_dir=/run/corelabs/rede
+script_dhcp=/usr/lib/Lithos/rede/dhcp
+pid_dir=/run/Lithos/rede
 
 mkdir -p "$pid_dir" || exit 1
 

@@ -1,0 +1,6 @@
+[Lithos]
+Server = https://archive.Lithos.dev.br/cpm/v1/$arch
+Enabled = yes
+# A chave pública oficial deve ser provisionada por canal confiável como
+# /etc/cpm/keyrings/Lithos.pem. A chave privada nunca integra o sistema.
+SigLevel = Required

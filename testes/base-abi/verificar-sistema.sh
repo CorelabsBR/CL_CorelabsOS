@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-[ "$(cat /etc/hostname)" = corelabs ]
+[ "$(cat /etc/hostname)" = Lithos ]
 [ "$(uname -m)" = x86_64 ]
 [ "$(id -u)" = 1000 ]
 [ "$(id -g)" = 100 ]
@@ -27,16 +27,16 @@ getent group wheel
 [ "$(printf 'z\na\n' | sort)" = "$(printf 'a\nz\n')" ]
 printf '' | sha256sum | grep '^e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
 [ "$(printf 'A' | iconv -f UTF-8 -t UTF-16LE | od -An -tx1 | tr -d ' \n')" = 4100 ]
-[ "$(getopt -o a: -- -a corelabs)" = " -a 'corelabs' --" ]
-flock /tmp/corelabs-abi-flock sh -c 'echo CORELABS_FLOCK_OK'
+[ "$(getopt -o a: -- -a Lithos)" = " -a 'Lithos' --" ]
+flock /tmp/Lithos-abi-flock sh -c 'echo Lithos_FLOCK_OK'
 uuidgen | grep -E '^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$'
 
 cd /
-sha256sum --check --status /usr/share/corelabs/base-abi-v1.sha256
-/lib64/ld-linux-x86-64.so.2 --list /tmp/hello-corelabs
-/lib64/ld-linux-x86-64.so.2 --list /tmp/hello-corelabs-cpp
-/tmp/hello-corelabs --dns
-/tmp/hello-corelabs-cpp
+sha256sum --check --status /usr/share/Lithos/base-abi-v1.sha256
+/lib64/ld-linux-x86-64.so.2 --list /tmp/hello-Lithos
+/lib64/ld-linux-x86-64.so.2 --list /tmp/hello-Lithos-cpp
+/tmp/hello-Lithos --dns
+/tmp/hello-Lithos-cpp
 
 ip addr
 ip route
@@ -52,4 +52,4 @@ else
     [ "$codigo" = 60 ]
 fi
 
-echo CORELABS_BASE_ABI_V1_SISTEMA_OK
+echo Lithos_BASE_ABI_V1_SISTEMA_OK

@@ -9,13 +9,13 @@ source "$RAIZ/configuracao/vm.conf"
 disco="$MAQUINAS/$VM_DISCO"
 marcador="$MAQUINAS/.${VM_DISCO%.qcow2}-instalado"
 
-[[ -f "$marcador" ]] || erro "sistema ainda não instalado; execute ./corelabs.sh instalar"
+[[ -f "$marcador" ]] || erro "sistema ainda não instalado; execute ./Lithos.sh instalar"
 for comando in qemu-system-x86_64 timeout; do exigir_comando "$comando"; done
 "$RAIZ/scripts/preparar-uefi.sh"
 
 aceleracao=(-accel tcg,thread=multi -cpu max)
 [[ -r /dev/kvm && -w /dev/kvm ]] && aceleracao=(-accel kvm -cpu host)
-token="CORELABS_PERSISTENCIA_$(date +%s)"
+token="Lithos_PERSISTENCIA_$(date +%s)"
 
 executar_boot() {
     local entrada="$1" log="$2"

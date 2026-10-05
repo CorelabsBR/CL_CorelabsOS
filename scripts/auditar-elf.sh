@@ -7,11 +7,11 @@ exigir_comando realpath
 rootfs="$(realpath -- "${1:-$COMPILACAO/rootfs}")"
 [[ "$rootfs" != / && -d "$rootfs" ]] || erro "rootfs inválido para auditoria"
 export LC_ALL=C
-if [[ -f "$rootfs/usr/share/corelabs/base-abi-v1.sha256" ]]; then
+if [[ -f "$rootfs/usr/share/Lithos/base-abi-v1.sha256" ]]; then
     (
         cd "$rootfs"
-        sha256sum --check --status usr/share/corelabs/base-abi-v1.sha256
-    ) || erro "runtime difere dos artefatos compilados para Corelabs"
+        sha256sum --check --status usr/share/Lithos/base-abi-v1.sha256
+    ) || erro "runtime difere dos artefatos compilados para Lithos"
 fi
 total=0
 dinamicos=0
@@ -34,10 +34,10 @@ while IFS= read -r -d '' arquivo; do
             "$cabecalho" == *'DYN (Shared object file)'* && \
             "$programa" != *'Requesting program interpreter:'* && "$caminhos" == '$ORIGIN' && \
             "$(realpath "${arquivo%/*}")" == "$rootfs/usr/lib/gconv" && \
-            -f "$rootfs/usr/share/corelabs/base-abi-v1.sha256" ]] && \
+            -f "$rootfs/usr/share/Lithos/base-abi-v1.sha256" ]] && \
             awk -v modulo="usr/lib/gconv/${arquivo##*/}" \
                 '$2 == modulo {encontrado=1} END {exit !encontrado}' \
-                "$rootfs/usr/share/corelabs/base-abi-v1.sha256"; then
+                "$rootfs/usr/share/Lithos/base-abi-v1.sha256"; then
             diretorios=(/usr/lib/gconv "${diretorios[@]}")
             modulos_origin=$((modulos_origin + 1))
         else
@@ -47,7 +47,7 @@ while IFS= read -r -d '' arquivo; do
     if [[ "$programa" == *'Requesting program interpreter:'* ]]; then
         interprete="$(sed -n 's/.*Requesting program interpreter: \([^]]*\)].*/\1/p' <<< "$programa")"
         [[ "$interprete" == /lib64/ld-linux-x86-64.so.2 ]] ||
-            erro "PT_INTERP não Corelabs: $arquivo: $interprete"
+            erro "PT_INTERP não Lithos: $arquivo: $interprete"
         [[ -f "$rootfs$interprete" ]] || erro "loader ausente: $interprete"
         resolvido="$(realpath "$rootfs$interprete")"
         [[ "$resolvido" == "$rootfs/"* ]] || erro "loader escapou do rootfs"

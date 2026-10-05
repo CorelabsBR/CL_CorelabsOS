@@ -12,7 +12,7 @@ done
 
 busybox="$COMPILACAO/rootfs/bin/busybox"
 origem_init="$RAIZ/sistema-emergencia/init"
-destino="$IMAGENS/corelabs-emergency.cpio.gz"
+destino="$IMAGENS/Lithos-emergency.cpio.gz"
 temporario="$COMPILACAO/emergencia.tmp"
 
 [[ -x "$busybox" ]] ||
@@ -56,13 +56,14 @@ do
 done
 
 mkdir -p -- "$IMAGENS"
+find "$temporario" -exec touch -h -d "@$SOURCE_DATE_EPOCH" {} +
 
 (
     cd "$temporario"
     find . -print0 |
         LC_ALL=C sort -z |
-        cpio --null -o --format=newc --owner=0:0 2>/dev/null |
-        gzip -9
+        cpio --reproducible --null -o --format=newc --owner=0:0 2>/dev/null |
+        gzip -n -9
 ) > "${destino}.tmp"
 
 mv -- "${destino}.tmp" "$destino"

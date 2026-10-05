@@ -1,6 +1,6 @@
-# Corelabs Supervisor
+# Lithos Supervisor
 
-Supervisor de processos da Corelabs OS 0.4 Sentinel.
+Supervisor de processos da Lithos 0.4 Sentinel.
 
 ## Responsabilidades
 

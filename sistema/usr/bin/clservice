@@ -10,7 +10,7 @@ acao="$1"
 case "$acao" in
     list)
         [ "$#" -eq 1 ] || uso
-        for servico in /etc/corelabs/servicos/*; do
+        for servico in /etc/Lithos/servicos/*; do
             [ -f "$servico" ] || continue
             [ -x "$servico" ] || continue
             case "$servico" in *.disabled) continue ;; esac

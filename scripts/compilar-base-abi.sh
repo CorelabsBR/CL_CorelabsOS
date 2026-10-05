@@ -26,7 +26,7 @@ done
 if [[ -f "$marca" && "$(<"$marca")" == "$hash_config" && \
     -x "$saida/usr/bin/ls" && -x "$saida/usr/bin/lsblk" && -f "$saida/usr/lib/libc.so.6" ]]; then
     "$RAIZ/scripts/auditar-elf.sh" "$saida"
-    mensagem "Corelabs Base ABI v1 já está atualizada"
+    mensagem "Lithos Base ABI v1 já está atualizada"
     exit 0
 fi
 
@@ -95,15 +95,15 @@ log="$LOGS/base-abi-userspace.log"
             "$STRIP" --strip-unneeded "$arquivo"
         fi
     done < <(find "$saida.tmp" -type f -print0)
-    mkdir -p "$saida.tmp/usr/share/corelabs"
+    mkdir -p "$saida.tmp/usr/share/Lithos"
     (
         cd "$saida.tmp"
         find usr/lib usr/bin usr/sbin usr/libexec -type f -print0 |
-            LC_ALL=C sort -z | xargs -0 sha256sum > usr/share/corelabs/base-abi-v1.sha256
+            LC_ALL=C sort -z | xargs -0 sha256sum > usr/share/Lithos/base-abi-v1.sha256
     )
     "$RAIZ/scripts/auditar-elf.sh" "$saida.tmp"
 } > "$log" 2>&1
 printf '%s\n' "$hash_config" > "$saida.tmp/.configuracao.sha256"
 rm -rf -- "$saida"
 mv "$saida.tmp" "$saida"
-mensagem "Corelabs Base ABI v1 construída; log: $log"
+mensagem "Lithos Base ABI v1 construída; log: $log"

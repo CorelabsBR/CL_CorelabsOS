@@ -11,7 +11,7 @@ preparar_diretorios
 exec 9>"$COMPILACAO/.base-abi.lock"
 flock 9
 
-# O compilador executa no host; somente seus produtos usam o sysroot Corelabs.
+# O compilador executa no host; somente seus produtos usam o sysroot Lithos.
 # Variáveis de busca externas não podem contaminar os produtos do target.
 unset CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH LIBRARY_PATH LD_LIBRARY_PATH
 unset GCC_EXEC_PREFIX COMPILER_PATH CONFIG_SITE PKG_CONFIG_PATH
@@ -237,4 +237,4 @@ for diretorio in toolchain sysroot; do
         erro "$COMPILACAO/$diretorio já existe e não é um link gerenciado"
     ln -sfn "$base/$diretorio" "$COMPILACAO/$diretorio"
 done
-mensagem "Toolchain GNU Corelabs e sysroot publicados."
+mensagem "Toolchain GNU Lithos e sysroot publicados."

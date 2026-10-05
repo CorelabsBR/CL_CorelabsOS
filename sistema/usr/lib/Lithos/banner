@@ -1,11 +1,11 @@
 #!/bin/sh
 
-logo=/etc/corelabs/logo.ascii
+logo=/etc/Lithos/logo.ascii
 cores=1
 
-if [ -r /etc/corelabs/banner.conf ]; then
+if [ -r /etc/Lithos/banner.conf ]; then
     # shellcheck source=/dev/null
-    . /etc/corelabs/banner.conf
+    . /etc/Lithos/banner.conf
 fi
 
 [ -r "$logo" ] || exit 0

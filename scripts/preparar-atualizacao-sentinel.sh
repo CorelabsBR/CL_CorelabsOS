@@ -7,7 +7,7 @@ source "$RAIZ/scripts/biblioteca.sh"
 source "$RAIZ/configuracao/vm.conf"
 
 DESTINO="$COMPILACAO/atualizacao-sentinel"
-PACOTE="$DESTINO.tmp/opt/corelabs-sentinel"
+PACOTE="$DESTINO.tmp/opt/Lithos-sentinel"
 
 ASSINATURA_INIT="d0994abd9c2f74f360154286dd65b511ce19cd3c31ef0a6191041c929459f269"
 
@@ -64,7 +64,7 @@ mkdir -p "$IMAGENS"
         LC_ALL=C sort -z |
         cpio --null -o --format=newc --owner=0:0 2>/dev/null |
         gzip -9
-) > "$IMAGENS/corelabs-atualizacao-sentinel.cpio.gz"
+) > "$IMAGENS/Lithos-atualizacao-sentinel.cpio.gz"
 
 rm -rf -- "$DESTINO"
 mv -- "$DESTINO.tmp" "$DESTINO"

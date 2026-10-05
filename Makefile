@@ -2,28 +2,28 @@
 
 all: compilar
 dependencias:
-	./corelabs.sh dependencias
+	./Lithos.sh dependencias
 compilar:
-	./corelabs.sh compilar
+	./Lithos.sh compilar
 kernel:
-	./corelabs.sh kernel
+	./Lithos.sh kernel
 rootfs:
-	./corelabs.sh rootfs
+	./Lithos.sh rootfs
 initramfs:
 	./scripts/initramfs.sh
 imagem:
-	./corelabs.sh imagem
+	./Lithos.sh imagem
 instalar:
-	./corelabs.sh instalar
+	./Lithos.sh instalar
 atualizar-identidade:
-	./corelabs.sh atualizar-identidade
+	./Lithos.sh atualizar-identidade
 iniciar:
-	./corelabs.sh iniciar
+	./Lithos.sh iniciar
 testar-persistencia:
-	./corelabs.sh testar-persistencia
+	./Lithos.sh testar-persistencia
 verificar:
-	./corelabs.sh verificar
+	./Lithos.sh verificar
 limpar:
-	./corelabs.sh limpar
+	./Lithos.sh limpar
 ajuda:
-	./corelabs.sh ajuda
+	./Lithos.sh ajuda

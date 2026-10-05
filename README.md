@@ -1,12 +1,12 @@
 <div align="center">
 
-<img src="./branding/system/oslogo.svg" alt="Corelabs OS" width="220" />
+<img src="./branding/system/oslogo.svg" alt="Lithos" width="220" />
 
-# Corelabs OS
+# Lithos
 
 **Linux independente, open source e experimental.**
 
-*Versão 0.3 "Forge"*
+*Versão 0.5 "Nexus"*
 
 </div>
 
@@ -14,7 +14,7 @@
 
 ## Sobre
 
-Corelabs OS é uma base Linux construída do zero, sem copiar o rootfs da distribuição hospedeira. A **Fase 1** entrega:
+Lithos é uma base Linux construída do zero, sem copiar o rootfs da distribuição hospedeira. A **Fase 1** entrega:
 
 - 🐧 kernel Linux oficial compilado a partir das fontes;
 - 🧰 BusyBox estático como userland;
@@ -28,12 +28,12 @@ Corelabs OS é uma base Linux construída do zero, sem copiar o rootfs da distri
 Testado em **Kubuntu 24.04**.
 
 ```bash
-./corelabs.sh dependencias         # instala as dependências do host
-./corelabs.sh compilar             # compila kernel e BusyBox
-./corelabs.sh verificar            # confere os artefatos gerados
-./corelabs.sh instalar             # cria o disco e instala o sistema
-./corelabs.sh iniciar              # inicia a VM
-./corelabs.sh testar-persistencia  # valida que os dados sobrevivem ao reboot
+./Lithos.sh dependencias         # instala as dependências do host
+./Lithos.sh compilar             # compila kernel e BusyBox
+./Lithos.sh verificar            # confere os artefatos gerados
+./Lithos.sh instalar             # cria o disco e instala o sistema
+./Lithos.sh iniciar              # inicia a VM
+./Lithos.sh testar-persistencia  # valida que os dados sobrevivem ao reboot
 ```
 
 **Sobre a primeira compilação**
@@ -41,7 +41,7 @@ Testado em **Kubuntu 24.04**.
 - Ela baixa as fontes do Linux e do BusyBox, então pode demorar.
 - Todo download só é aceito após validação **SHA-256**.
 - As próximas compilações reaproveitam fontes e objetos.
-- Para refazer o kernel por completo: `./corelabs.sh kernel --forcar`.
+- Para refazer o kernel por completo: `./Lithos.sh kernel --forcar`.
 
 ## Usando a VM
 
@@ -52,11 +52,11 @@ O console funciona pela **porta serial**. Dentro da VM, use `poweroff` para desl
 | `Ctrl+A`, depois `C` | Abre o monitor QEMU (compartilha o terminal) |
 | `Ctrl+A`, depois `X` | Encerra a VM |
 
-Para abrir uma janela de vídeo, use `./corelabs.sh iniciar --grafico`. O terminal continua na serial.
+Para abrir uma janela de vídeo, use `./Lithos.sh iniciar --grafico`. O terminal continua na serial.
 
 ## Disco e instalação
 
-- O disco `maquinas/corelabs.qcow2` tem **40 GB** e é preservado entre boots.
+- O disco `maquinas/Lithos.qcow2` tem **40 GB** e é preservado entre boots.
 - O comando `instalar` pede **confirmação explícita** antes de criar a tabela GPT, a ESP (FAT32) e a raiz (ext4).
 
 ## Configuração
@@ -77,4 +77,4 @@ Para abrir uma janela de vídeo, use `./corelabs.sh iniciar --grafico`. O termin
 
 ## Comandos
 
-Execute `./corelabs.sh ajuda` para ver a interface completa. Os alvos equivalentes também estão no `Makefile`.
+Execute `./Lithos.sh ajuda` para ver a interface completa. Os alvos equivalentes também estão no `Makefile`.

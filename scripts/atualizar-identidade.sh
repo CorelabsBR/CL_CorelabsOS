@@ -7,7 +7,7 @@ source "$RAIZ/scripts/biblioteca.sh"
 source "$RAIZ/configuracao/vm.conf"
 
 (( EUID != 0 )) || erro "a atualização não deve ser executada como root"
-disco="${CORELABS_DISCO:-$MAQUINAS/$VM_DISCO}"
+disco="${Lithos_DISCO:-$MAQUINAS/$VM_DISCO}"
 marcador="$MAQUINAS/.${VM_DISCO%.qcow2}-instalado"
 
 [[ -f "$marcador" ]] || erro "sistema persistente não instalado"
@@ -19,14 +19,14 @@ log="$LOGS/atualizacao-identidade.log"
 set +e
 timeout --signal=TERM "$VM_TIMEOUT_TESTE" qemu-system-x86_64 \
     -machine q35 "${aceleracao[@]}" -m 512 -smp 1 \
-    -kernel "$COMPILACAO/kernel/bzImage" -initrd "$IMAGENS/corelabs-atualizacao-identidade.cpio.gz" \
+    -kernel "$COMPILACAO/kernel/bzImage" -initrd "$IMAGENS/Lithos-atualizacao-identidade.cpio.gz" \
     -append "console=ttyS0,115200 earlycon=uart,io,0x3f8,115200 loglevel=4 rdinit=/init" \
     -drive "if=none,file=$disco,format=qcow2,id=disco0" \
     -device virtio-blk-pci,drive=disco0 -serial "file:$log" -display none -no-reboot
 codigo=$?
 set -e
 (( codigo == 0 )) || erro "atualização terminou com código $codigo; consulte $log"
-grep -q '^CORELABS_IDENTIDADE_ATUALIZADA_OK' "$log" \
+grep -q '^Lithos_IDENTIDADE_ATUALIZADA_OK' "$log" \
     || erro "marcador de atualização não encontrado; consulte $log"
 mensagem "Identidade atualizada sem reparticionar o disco"
 

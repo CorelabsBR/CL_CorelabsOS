@@ -5,7 +5,7 @@ export PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
 raiz_uuid="@RAIZ_UUID@"
 alvo=/alvo
-payload=/opt/corelabs-identidade
+payload=/opt/Lithos-identidade
 
 # SHA-256 do PID 1 original, obtido diretamente do Git.
 assinatura_original="57682607d76501a98788cd28f2f6ad7f1ee468b98ab4dd8e44b415c1a095f950"
@@ -29,7 +29,7 @@ copiar_arquivo() {
         falha "não foi possível copiar $origem"
 }
 
-echo "Corelabs OS — Atualização de identidade"
+echo "Lithos — Atualização de identidade"
 echo "Preparando ambiente..."
 
 mount -t devtmpfs devtmpfs /dev ||
@@ -52,10 +52,10 @@ mdev -s || falha "não foi possível detectar dispositivos"
 
 for arquivo in \
     "$payload/usr/lib/os-release" \
-    "$payload/usr/lib/corelabs/banner" \
-    "$payload/usr/share/pixmaps/corelabs-logo.svg" \
-    "$payload/etc/corelabs/logo.ascii" \
-    "$payload/etc/corelabs/banner.conf" \
+    "$payload/usr/lib/Lithos/banner" \
+    "$payload/usr/share/pixmaps/Lithos-logo.svg" \
+    "$payload/etc/Lithos/logo.ascii" \
+    "$payload/etc/Lithos/banner.conf" \
     "$payload/etc/issue" \
     "$payload/etc/motd" \
     "$payload/init"
@@ -111,9 +111,9 @@ fi
 # Criar diretórios necessários.
 
 mkdir -p \
-    "$alvo/usr/lib/corelabs" \
+    "$alvo/usr/lib/Lithos" \
     "$alvo/usr/share/pixmaps" \
-    "$alvo/etc/corelabs" ||
+    "$alvo/etc/Lithos" ||
     falha "não foi possível preparar diretórios"
 
 # Instalar componentes oficiais.
@@ -123,15 +123,15 @@ copiar_arquivo \
     "$alvo/usr/lib/os-release"
 
 copiar_arquivo \
-    "$payload/usr/lib/corelabs/banner" \
-    "$alvo/usr/lib/corelabs/banner"
+    "$payload/usr/lib/Lithos/banner" \
+    "$alvo/usr/lib/Lithos/banner"
 
-chmod 0755 "$alvo/usr/lib/corelabs/banner" ||
+chmod 0755 "$alvo/usr/lib/Lithos/banner" ||
     falha "não foi possível configurar o banner"
 
 copiar_arquivo \
-    "$payload/usr/share/pixmaps/corelabs-logo.svg" \
-    "$alvo/usr/share/pixmaps/corelabs-logo.svg"
+    "$payload/usr/share/pixmaps/Lithos-logo.svg" \
+    "$alvo/usr/share/pixmaps/Lithos-logo.svg"
 
 # Substituir o PID 1 somente quando a assinatura corresponder.
 
@@ -165,7 +165,7 @@ elif [ -L "$alvo/etc/os-release" ]; then
         echo "os-release personalizado preservado."
     fi
 
-elif grep -q 'Corelabs OS Fase 1 Persistente' \
+elif grep -q 'Lithos Fase 1 Persistente' \
     "$alvo/etc/os-release" 2>/dev/null; then
 
     rm -f "$alvo/etc/os-release" ||
@@ -180,18 +180,18 @@ fi
 
 # Preservar a logo ASCII se já tiver sido personalizada.
 
-if [ ! -e "$alvo/etc/corelabs/logo.ascii" ]; then
+if [ ! -e "$alvo/etc/Lithos/logo.ascii" ]; then
     copiar_arquivo \
-        "$payload/etc/corelabs/logo.ascii" \
-        "$alvo/etc/corelabs/logo.ascii"
+        "$payload/etc/Lithos/logo.ascii" \
+        "$alvo/etc/Lithos/logo.ascii"
 else
     echo "Logo ASCII existente preservada."
 fi
 
-if [ ! -e "$alvo/etc/corelabs/banner.conf" ]; then
+if [ ! -e "$alvo/etc/Lithos/banner.conf" ]; then
     copiar_arquivo \
-        "$payload/etc/corelabs/banner.conf" \
-        "$alvo/etc/corelabs/banner.conf"
+        "$payload/etc/Lithos/banner.conf" \
+        "$alvo/etc/Lithos/banner.conf"
 fi
 
 # Atualizar os arquivos de identificação.
@@ -200,7 +200,7 @@ if [ ! -e "$alvo/etc/issue" ]; then
 
     copiar_arquivo "$payload/etc/issue" "$alvo/etc/issue"
 
-elif grep -q 'Corelabs OS' "$alvo/etc/issue" 2>/dev/null; then
+elif grep -q 'Lithos' "$alvo/etc/issue" 2>/dev/null; then
 
     copiar_arquivo "$payload/etc/issue" "$alvo/etc/issue"
 
@@ -213,7 +213,7 @@ if [ ! -e "$alvo/etc/motd" ]; then
     copiar_arquivo "$payload/etc/motd" "$alvo/etc/motd"
 
 elif grep -Eq \
-    'sistema mínimo independente|Corelabs OS 0\.2 Genesis' \
+    'sistema mínimo independente|Lithos 0\.2 Genesis' \
     "$alvo/etc/motd" 2>/dev/null; then
 
     copiar_arquivo "$payload/etc/motd" "$alvo/etc/motd"
@@ -225,9 +225,9 @@ fi
 # Configurar hostname somente quando não houver personalização.
 
 if [ ! -e "$alvo/etc/hostname" ] ||
-   grep -qx corelabs "$alvo/etc/hostname" 2>/dev/null; then
+   grep -qx Lithos "$alvo/etc/hostname" 2>/dev/null; then
 
-    printf 'corelabs\n' > "$alvo/etc/hostname" ||
+    printf 'Lithos\n' > "$alvo/etc/hostname" ||
         falha "não foi possível configurar hostname"
 
 else
@@ -237,8 +237,8 @@ fi
 # Confirmar arquivos essenciais.
 
 exigir_arquivo "$alvo/usr/lib/os-release"
-exigir_arquivo "$alvo/usr/lib/corelabs/banner"
-exigir_arquivo "$alvo/etc/corelabs/logo.ascii"
+exigir_arquivo "$alvo/usr/lib/Lithos/banner"
+exigir_arquivo "$alvo/etc/Lithos/logo.ascii"
 exigir_arquivo "$alvo/init"
 
 echo "Sincronizando alterações..."
@@ -248,6 +248,6 @@ sync || falha "falha na sincronização"
 umount "$alvo" ||
     falha "não foi possível desmontar a raiz"
 
-echo "CORELABS_IDENTIDADE_ATUALIZADA_OK"
+echo "Lithos_IDENTIDADE_ATUALIZADA_OK"
 
 poweroff -f

@@ -53,23 +53,23 @@ fi
 
 mount -t tmpfs tmpfs /run ||
     falha "não foi possível montar /run"
-mkdir -p /run/corelabs
-chmod 0755 /run/corelabs
+mkdir -p /run/Lithos
+chmod 0755 /run/Lithos
 
 mount -t tmpfs tmpfs /tmp ||
     falha "não foi possível montar /tmp"
 
 hostname -F /etc/hostname 2>/dev/null ||
-    hostname corelabs
+    hostname Lithos
 
-if [ -x /usr/lib/corelabs/rede/iniciar ]; then
-    echo "[Corelabs] Inicializando rede."
-    /usr/lib/corelabs/rede/iniciar ||
-        echo "[Corelabs] Aviso: inicialização da rede apresentou falhas."
+if [ -x /usr/lib/Lithos/rede/iniciar ]; then
+    echo "[Lithos] Inicializando rede."
+    /usr/lib/Lithos/rede/iniciar ||
+        echo "[Lithos] Aviso: inicialização da rede apresentou falhas."
 fi
 
-if [ -x /etc/corelabs/inicializacao.sh ]; then
-    /etc/corelabs/inicializacao.sh ||
+if [ -x /etc/Lithos/inicializacao.sh ]; then
+    /etc/Lithos/inicializacao.sh ||
         echo "Aviso: alguns serviços falharam."
 fi
 
@@ -77,12 +77,12 @@ if [ ! -x /usr/sbin/clcontrold ]; then
     falha "clcontrold não está disponível"
 fi
 
-echo "[Corelabs] Iniciando controle administrativo."
+echo "[Lithos] Iniciando controle administrativo."
 /usr/sbin/clcontrold &
 PID_CONTROLE=$!
 
 tentativas=0
-while [ ! -S /run/corelabs/control.sock ]; do
+while [ ! -S /run/Lithos/control.sock ]; do
     if ! kill -0 "$PID_CONTROLE" 2>/dev/null; then
         wait "$PID_CONTROLE" 2>/dev/null || true
         falha "clcontrold encerrou antes de ficar operacional"
@@ -101,14 +101,14 @@ if ! kill -0 "$PID_CONTROLE" 2>/dev/null; then
     falha "clcontrold encerrou durante a inicialização"
 fi
 
-echo "[Corelabs] Controle administrativo operacional."
+echo "[Lithos] Controle administrativo operacional."
 
 mostrar_banner() {
     console="$1"
 
     {
-        [ ! -x /usr/lib/corelabs/banner ] ||
-            /usr/lib/corelabs/banner
+        [ ! -x /usr/lib/Lithos/banner ] ||
+            /usr/lib/Lithos/banner
 
         cat /etc/motd
         echo "Kernel: $(uname -r) | Arquitetura: $(uname -m)"
@@ -171,7 +171,7 @@ supervisionar_ttyS0() {
 [ ! -c /dev/ttyS0 ] ||
     mostrar_banner /dev/ttyS0
 
-echo "[Corelabs] Iniciando consoles."
+echo "[Lithos] Iniciando consoles."
 
 supervisionar_tty1 &
 PID_TTY1=$!
@@ -183,7 +183,7 @@ encerrar() {
     operacao="$1"
     trap - USR1 TERM
 
-    echo "[Corelabs] Encerramento solicitado: $operacao."
+    echo "[Lithos] Encerramento solicitado: $operacao."
 
     kill -TERM "$PID_TTY1" "$PID_TTYS0" 2>/dev/null || true
     wait "$PID_TTY1" "$PID_TTYS0" 2>/dev/null || true
@@ -191,12 +191,12 @@ encerrar() {
     kill -TERM "$PID_CONTROLE" 2>/dev/null || true
     wait "$PID_CONTROLE" 2>/dev/null || true
 
-    if [ -x /etc/corelabs/encerramento.sh ]; then
-        /etc/corelabs/encerramento.sh ||
-            echo "[Corelabs] Aviso: encerramento com falhas."
+    if [ -x /etc/Lithos/encerramento.sh ]; then
+        /etc/Lithos/encerramento.sh ||
+            echo "[Lithos] Aviso: encerramento com falhas."
     fi
 
-    echo "[Corelabs] Sincronizando os dados..."
+    echo "[Lithos] Sincronizando os dados..."
     sync
 
     umount /tmp /dev/pts /sys /proc 2>/dev/null || true
@@ -204,15 +204,15 @@ encerrar() {
 
     case "$operacao" in
         reboot)
-            echo "[Corelabs] Reiniciando."
+            echo "[Lithos] Reiniciando."
             /bin/busybox reboot -f
             ;;
         halt)
-            echo "[Corelabs] Parando."
+            echo "[Lithos] Parando."
             /bin/busybox halt -f
             ;;
         poweroff)
-            echo "[Corelabs] Desligando."
+            echo "[Lithos] Desligando."
             /bin/busybox poweroff -f
             ;;
     esac
@@ -223,7 +223,7 @@ encerrar() {
 }
 
 receber_pedido() {
-    pedido=/run/corelabs/operacao
+    pedido=/run/Lithos/operacao
     operacao=
     if [ -r "$pedido" ]; then
         IFS= read -r operacao < "$pedido" || true
@@ -232,9 +232,9 @@ receber_pedido() {
     case "$operacao" in
         poweroff|reboot|halt) encerrar "$operacao" ;;
         *)
-            echo "[Corelabs] Solicitação de encerramento inválida." >&2
+            echo "[Lithos] Solicitação de encerramento inválida." >&2
             rm -f "$pedido"
-            rmdir /run/corelabs/encerrando 2>/dev/null || true
+            rmdir /run/Lithos/encerrando 2>/dev/null || true
             ;;
     esac
 }

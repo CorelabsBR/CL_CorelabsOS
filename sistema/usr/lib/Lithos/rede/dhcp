@@ -61,10 +61,10 @@ ipv4_valido() {
 }
 
 atualizar_dns() {
-    temporario="/run/corelabs/resolv.conf.$$"
+    temporario="/run/Lithos/resolv.conf.$$"
 
     {
-        echo "# Gerado automaticamente pelo DHCP do Corelabs OS."
+        echo "# Gerado automaticamente pelo DHCP do Lithos."
         for servidor in ${dns:-}; do
             ipv4_valido "$servidor" || continue
             echo "nameserver $servidor"

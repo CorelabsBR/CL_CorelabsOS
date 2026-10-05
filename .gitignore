@@ -11,7 +11,7 @@
 *.log
 *~
 
-# Corelabs Supervisor: código-fonte próprio.
+# Lithos Supervisor: código-fonte próprio.
 !/fontes/clsupervisor/
 !/fontes/clsupervisor/*.c
 !/fontes/clsupervisor/*.h
@@ -37,26 +37,8 @@ fontes/clsupervisor/*.pre-*
 # Código próprio do validador/transações CPM.
 !/fontes/cpm/
 !/fontes/cpm/*.c
-# Corelabs Control: código-fonte próprio.
+# Lithos Control: código-fonte próprio.
 !/fontes/clcontrold/
 !/fontes/clcontrold/*.c
 !/fontes/clcontrold/*.h
 !/fontes/clcontrold/*.md
-
-# Corelabs Control Client: código-fonte próprio.
-!/fontes/clcontrol/
-!/fontes/clcontrol/*.c
-!/fontes/clcontrol/*.h
-!/fontes/clcontrol/*.md
-
-# Corelabs Control: código-fonte próprio.
-!/fontes/clcontrold/
-!/fontes/clcontrold/*.c
-!/fontes/clcontrold/*.h
-!/fontes/clcontrold/*.md
-
-# Corelabs Control Client: código-fonte próprio.
-!/fontes/clcontrol/
-!/fontes/clcontrol/*.c
-!/fontes/clcontrol/*.h
-!/fontes/clcontrol/*.md

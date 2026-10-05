@@ -18,7 +18,7 @@ command -v readelf >/dev/null ||
 
 mkdir -p "$DESTINO"
 
-echo "[Corelabs] Compilando clsupervisor..."
+echo "[Lithos] Compilando clsupervisor..."
 
 gcc \
     -std=c11 \
@@ -41,4 +41,4 @@ fi
 chmod 0755 "$BINARIO.tmp"
 mv -f "$BINARIO.tmp" "$BINARIO"
 
-echo "[Corelabs] clsupervisor compilado."
+echo "[Lithos] clsupervisor compilado."

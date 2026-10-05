@@ -15,7 +15,7 @@ with tarfile.open(out / "cpm-abi-test.cpm", "w:gz", format=tarfile.USTAR_FORMAT)
     info.mode = 0o644
     info.size = len(manifest)
     tar.addfile(info, io.BytesIO(manifest))
-    binary = (repo / "compilacao/testes-base-abi/hello-corelabs-cpp").read_bytes()
+    binary = (repo / "compilacao/testes-base-abi/hello-Lithos-cpp").read_bytes()
     info = tarfile.TarInfo("payload/usr/bin/hello-cpm")
     info.mode = 0o755
     info.size = len(binary)
@@ -23,7 +23,7 @@ with tarfile.open(out / "cpm-abi-test.cpm", "w:gz", format=tarfile.USTAR_FORMAT)
 package = (out / "cpm-abi-test.cpm").read_bytes()
 (out / "index").write_text("cpm-abi-test|1.0|1|x86_64|cpm-abi-test.cpm|"
                           + hashlib.sha256(package).hexdigest()
-                          + "|Fixture dinamica Corelabs Base ABI v1\n")
+                          + "|Fixture dinamica Lithos Base ABI v1\n")
 # Esse double é explicitamente local; não representa transporte HTTPS real.
 (out / "curl").write_text('''#!/bin/sh
 set -eu

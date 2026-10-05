@@ -1,7 +1,0 @@
-[corelabs]
-Server = https://archive.corelabs.dev.br/cpm/v1/$arch
-Enabled = yes
-# Bootstrap explícito: ainda não existe infraestrutura oficial de assinatura.
-# Optional aceita índices/pacotes SEM assinatura, verificando HTTPS e SHA-256.
-# Assinatura presente sem verificador/chave é erro; Required falha fechado.
-SigLevel = Optional

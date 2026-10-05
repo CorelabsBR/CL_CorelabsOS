@@ -8,6 +8,6 @@ printf 'Remover somente artefatos de compilação e o initramfs? O disco QCOW2 s
 read -r resposta
 [[ "$resposta" =~ ^[sS]$ ]] || { mensagem "Limpeza cancelada"; exit 0; }
 rm -rf -- "$COMPILACAO"
-rm -f -- "$IMAGENS/corelabs-initramfs.cpio.gz"
+rm -f -- "$IMAGENS/Lithos-initramfs.cpio.gz"
 mensagem "Artefatos removidos; fontes e disco persistente foram preservados"
 

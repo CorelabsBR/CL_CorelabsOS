@@ -22,7 +22,7 @@ for comando in curl sha256sum tar make gcc readelf strip pkg-config; do exigir_c
 preparar_diretorios
 baixar_verificado "$CURL_URL" "$arquivo" "$CURL_SHA256"
 "$RAIZ/scripts/compilar-openssl.sh"
-
+#nordeste e seu poder de manipulação, não é mesmo?
 if [[ ! -d "$arvore" ]]; then
     mensagem "Extraindo curl $CURL_VERSAO"
     tar -C "$FONTES" -xf "$arquivo"
