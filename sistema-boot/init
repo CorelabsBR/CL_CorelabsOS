@@ -33,11 +33,13 @@ fi
 mdev -s
 
 raiz_uuid=""
+
 for argumento in $(cat /proc/cmdline); do
     case "$argumento" in
         root=UUID=*) raiz_uuid="${argumento#root=UUID=}" ;;
     esac
 done
+
 [ -n "$raiz_uuid" ] || falha "parâmetro root=UUID ausente"
 
 dispositivo=""

@@ -7,7 +7,7 @@ source "$RAIZ/scripts/biblioteca.sh"
 source "$RAIZ/configuracao/vm.conf"
 
 (( EUID != 0 )) || erro "o instalador não deve ser executado como root"
-for comando in qemu-system-x86_64 qemu-img timeout; do exigir_comando "$comando"; done
+for comando in qemu-system-x86_64 qemu-img timeout tee; do exigir_comando "$comando"; done
 [[ "$VM_DISCO" == "$(basename -- "$VM_DISCO")" ]] ||
     erro "VM_DISCO deve conter apenas o nome do arquivo"
 
@@ -38,8 +38,8 @@ timeout --signal=TERM "$VM_TIMEOUT_TESTE" qemu-system-x86_64 \
     -append "console=ttyS0,115200 rdinit=/init corelabs.instalar=SIM" \
     -drive "if=none,file=$disco,format=qcow2,id=alvo" \
     -device virtio-blk-pci,drive=alvo -serial stdio -display none -no-reboot \
-    > "$log" 2>&1
-codigo=$?
+    2>&1 | tee "$log"
+codigo=${PIPESTATUS[0]}
 set -e
 if (( codigo == 0 )) && grep -q '^CORELABS_INSTALACAO_OK' "$log"; then
     printf '%s\n' "$VM_RAIZ_UUID" > "$marcador"

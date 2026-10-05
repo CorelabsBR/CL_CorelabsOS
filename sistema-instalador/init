@@ -42,6 +42,32 @@ mkfs.vfat -n CORELABS_EF /dev/vda1 || falha "formatação FAT32 falhou"
 mke2fs -q -t ext4 -U '@RAIZ_UUID@' -L corelabs-root /dev/vda2 || falha "formatação ext4 falhou"
 mount -t ext4 /dev/vda2 /alvo || falha "montagem da raiz falhou"
 tar -xzf /opt/corelabs/rootfs.tar.gz -C /alvo || falha "extração do rootfs falhou"
+
+# O pacote é normalizado como root:root para não depender dos UID/GID
+# do host. Restaurar aqui o proprietário específico de /home/girelli.
+[[ -d /alvo/home/girelli ]] ||
+    falha "home do usuário girelli ausente"
+
+chown -R 1000:100 /alvo/home/girelli ||
+    falha "não foi possível configurar a home de girelli"
+
+chmod 0755 /alvo/home ||
+    falha "não foi possível configurar /home"
+
+chmod 0755 /alvo/home/girelli ||
+    falha "não foi possível configurar /home/girelli"
+
+echo
+echo "Configure a senha inicial do usuário girelli:"
+chroot /alvo /bin/busybox passwd -a sha512 girelli ||
+    falha "não foi possível configurar a senha de girelli"
+
+# su autentica a senha da conta de destino. Reutilizar o hash recém-criado
+# habilita root sem reter, registrar ou solicitar novamente a senha em claro.
+awk -F: '$1 == "girelli" { print "root:" $2 }' /alvo/etc/shadow |
+    chroot /alvo /bin/busybox chpasswd -e ||
+    falha "não foi possível habilitar a autenticação de root"
+
 mkdir -p /alvo/boot/efi /alvo/proc /alvo/sys /alvo/dev /alvo/run /alvo/tmp
 chmod 1777 /alvo/tmp
 cp /opt/corelabs/vmlinuz /alvo/boot/vmlinuz-corelabs
@@ -55,7 +81,14 @@ devtmpfs             /dev      devtmpfs defaults  0 0
 EOF
 mount -t vfat /dev/vda1 /alvo/boot/efi || falha "montagem da ESP falhou"
 mkdir -p /alvo/boot/efi/EFI/BOOT
-cp /opt/corelabs/BOOTX64.EFI /alvo/boot/efi/EFI/BOOT/BOOTX64.EFI
+mkdir -p /alvo/boot/efi/EFI/CORELABS
+
+cp /opt/corelabs/BOOTX64.EFI     /alvo/boot/efi/EFI/BOOT/BOOTX64.EFI
+
+cp /opt/corelabs/vmlinuz-emergency     /alvo/boot/efi/EFI/CORELABS/vmlinuz-emergency
+
+cp /opt/corelabs/emergency.cpio.gz     /alvo/boot/efi/EFI/CORELABS/emergency.cpio.gz
+
 sync
 umount /alvo/boot/efi
 umount /alvo

@@ -64,5 +64,5 @@ fi
 mensagem "Boot UEFI a partir do disco persistente"
 exec qemu-system-x86_64 "${comum[@]}" \
     -drive "if=pflash,format=raw,readonly=on,file=$OVMF_CODE" \
-    -drive "if=pflash,format=raw,file=$MAQUINAS/OVMF_VARS.fd"
+    -drive "if=pflash,format=raw,file=$MAQUINAS/$VM_UEFI_VARS"
 

@@ -73,6 +73,19 @@ done
 "$RAIZ/scripts/compilar-controle.sh"
 "$RAIZ/scripts/compilar-clcontrol.sh"
 "$RAIZ/scripts/compilar-bash.sh"
+"$RAIZ/scripts/compilar-sudo.sh"
+"$RAIZ/scripts/compilar-curl.sh"
+"$RAIZ/scripts/compilar-base-abi.sh"
+"$RAIZ/scripts/compilar-cpm.sh"
+
+# GNU userspace normal; BusyBox permanece disponível pelo binário explícito.
+rsync -a --exclude=.configuracao.sha256 "$COMPILACAO/base-abi-runtime/" "$rootfs.tmp/"
+for executavel in "$COMPILACAO/base-abi-runtime/usr/bin/"*; do
+    comando="${executavel##*/}"
+    if [[ -L "$rootfs.tmp/bin/$comando" ]]; then
+        ln -sfn "../usr/bin/$comando" "$rootfs.tmp/bin/$comando"
+    fi
+done
 
 install -Dm0755 \
     "$COMPILACAO/clsupervisor/clsupervisor" \
@@ -89,12 +102,43 @@ install -Dm0755 \
 install -Dm0755 \
     "$COMPILACAO/bash/bash" \
     "$rootfs.tmp/bin/bash"
+
+# Uma cópia dedicada permite SUID apenas ao applet su. O BusyBox compartilhado
+# permanece sem privilégios e seleciona o applet pela basename de argv[0].
+install -Dm4755 \
+    "$saida/busybox" \
+    "$rootfs.tmp/bin/su"
+
+install -Dm4755 \
+    "$COMPILACAO/sudo/usr/bin/sudo" \
+    "$rootfs.tmp/usr/bin/sudo"
+
+install -Dm0755 \
+    "$COMPILACAO/curl/usr/bin/curl" \
+    "$rootfs.tmp/usr/bin/curl"
+
+bundle="$FONTES/cacert-$CA_BUNDLE_SHA256.pem"
+baixar_verificado "$CA_BUNDLE_URL" "$bundle" "$CA_BUNDLE_SHA256"
+install -Dm0644 \
+    "$bundle" \
+    "$rootfs.tmp/etc/ssl/certs/ca-certificates.crt"
+
+chmod 0440 "$rootfs.tmp/etc/sudoers"
+install -Dm0755 "$COMPILACAO/cpm/arquivo" "$rootfs.tmp/usr/libexec/cpm/arquivo"
+chmod 0755 "$rootfs.tmp/usr/bin/cpm"
+mkdir -p "$rootfs.tmp/etc/cpm/keyrings"
+mkdir -p -- "$rootfs.tmp/var/lib/sudo" "$rootfs.tmp/var/log/sudo-io"
+chmod 0700 "$rootfs.tmp/var/lib/sudo" "$rootfs.tmp/var/log/sudo-io"
 mkdir -p -- "$rootfs.tmp/etc/corelabs" "$rootfs.tmp/usr/share/pixmaps"
 cp -- "$RAIZ/branding/system/ascii.txt" "$rootfs.tmp/etc/corelabs/logo.ascii"
 cp -- "$RAIZ/branding/system/oslogo.svg" "$rootfs.tmp/usr/share/pixmaps/corelabs-logo.svg"
 chmod 0755 "$rootfs.tmp/init"
 chmod 0755 "$rootfs.tmp/usr/lib/corelabs/banner"
+# rsync preserva modos do checkout; um umask 0002 não deve produzir ancestrais
+# graváveis por grupo na raiz instalada (inclusive a própria raiz).
+find "$rootfs.tmp" -type d -exec chmod go-w {} +
 chmod 1777 "$rootfs.tmp/tmp"
+"$RAIZ/scripts/auditar-elf.sh" "$rootfs.tmp"
 rm -rf -- "$rootfs"
 mv -- "$rootfs.tmp" "$rootfs"
 mensagem "Rootfs montado em $rootfs"

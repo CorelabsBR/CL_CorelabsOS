@@ -1,0 +1,7 @@
+Defaults env_reset
+Defaults secure_path="/usr/sbin:/usr/bin:/sbin:/bin"
+Defaults passwd_tries=3
+Defaults logfile="/var/log/sudo.log"
+
+root ALL=(ALL:ALL) ALL
+%wheel ALL=(ALL:ALL) ALL

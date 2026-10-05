@@ -23,7 +23,7 @@ executar_boot() {
     { sleep 8; printf '%b' "$entrada"; } | timeout --signal=TERM "$VM_TIMEOUT_TESTE" \
         qemu-system-x86_64 -machine q35 "${aceleracao[@]}" -m 1024 -smp 2 \
         -drive "if=pflash,format=raw,readonly=on,file=$OVMF_CODE" \
-        -drive "if=pflash,format=raw,file=$MAQUINAS/OVMF_VARS.fd" \
+        -drive "if=pflash,format=raw,file=$MAQUINAS/$VM_UEFI_VARS" \
         -drive "if=none,file=$disco,format=qcow2,id=disco0" \
         -device virtio-blk-pci,drive=disco0 -netdev user,id=rede0 \
         -device virtio-net-pci,netdev=rede0 -serial stdio -display none -no-reboot \

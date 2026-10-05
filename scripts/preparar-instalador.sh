@@ -12,6 +12,7 @@ preparar_diretorios
 "$RAIZ/scripts/rootfs.sh"
 "$RAIZ/scripts/kernel.sh"
 "$RAIZ/scripts/ferramentas-instalador.sh"
+"$RAIZ/scripts/preparar-emergencia.sh"
 
 log="$LOGS/preparar-instalador.log"
 : > "$log"
@@ -32,6 +33,7 @@ transicao="$saida.tmp/transicao"
 montar_busybox "$transicao"
 cp -- "$RAIZ/sistema-boot/init" "$transicao/init"
 chmod 0755 "$transicao/init"
+# votar 22 tão forte que o lula vai sentir a dedada no furico dele
 (
     cd "$transicao"
     find . -print0 | LC_ALL=C sort -z | cpio --null -o --format=newc --owner=0:0 2>/dev/null | gzip -9
@@ -43,12 +45,26 @@ cat > "$grub_cfg" <<EOF
 serial --unit=0 --speed=115200
 terminal_input console serial
 terminal_output console serial
-set timeout=0
+
 set default=0
-menuentry 'Corelabs OS' {
+set timeout=5
+
+menuentry 'Corelabs OS 0.5 Nexus' {
     search --no-floppy --fs-uuid --set=raiz $VM_RAIZ_UUID
-    linux (\$raiz)/boot/vmlinuz-corelabs root=UUID=$VM_RAIZ_UUID rw console=tty0 console=ttyS0,115200
+    linux (\$raiz)/boot/vmlinuz-corelabs root=UUID=$VM_RAIZ_UUID rw console=tty0 console=ttyS0,115200 loglevel=4
     initrd (\$raiz)/boot/initramfs-corelabs.cpio.gz
+}
+
+menuentry 'Corelabs OS 0.5 Nexus (modo detalhado)' {
+    search --no-floppy --fs-uuid --set=raiz $VM_RAIZ_UUID
+    linux (\$raiz)/boot/vmlinuz-corelabs root=UUID=$VM_RAIZ_UUID rw console=tty0 console=ttyS0,115200 loglevel=7
+    initrd (\$raiz)/boot/initramfs-corelabs.cpio.gz
+}
+
+menuentry 'Corelabs Emergency Shell' {
+    search --no-floppy --label --set=esp CORELABS_EF
+    linux (\$esp)/EFI/CORELABS/vmlinuz-emergency console=tty0 console=ttyS0,115200 loglevel=4 rdinit=/init
+    initrd (\$esp)/EFI/CORELABS/emergency.cpio.gz
 }
 EOF
 grub-mkstandalone -O x86_64-efi -o "$saida.tmp/BOOTX64.EFI" \
@@ -68,12 +84,14 @@ sed -i "s/@RAIZ_UUID@/$VM_RAIZ_UUID/g" "$ambiente/init"
 chmod 0755 "$ambiente/init"
 rm -f -- "$ambiente/sbin/mke2fs" "$ambiente/sbin/sfdisk"
 cp -- "$COMPILACAO/e2fsprogs/misc/mke2fs.static" "$ambiente/sbin/mke2fs"
-cp -- "$COMPILACAO/util-linux/sfdisk.static" "$ambiente/sbin/sfdisk"
+cp -- "$COMPILACAO/util-linux-instalador-$UTIL_LINUX_VERSAO/sfdisk.static" "$ambiente/sbin/sfdisk"
 cp -- "$COMPILACAO/e2fsprogs/misc/mke2fs.conf" "$ambiente/etc/mke2fs.conf"
 mkdir -p -- "$ambiente/opt/corelabs"
 cp -- "$rootfs_pacote" "$ambiente/opt/corelabs/rootfs.tar.gz"
 cp -- "$COMPILACAO/kernel/bzImage" "$ambiente/opt/corelabs/vmlinuz"
 cp -- "$IMAGENS/corelabs-initramfs-disco.cpio.gz" "$ambiente/opt/corelabs/initramfs-disco.cpio.gz"
+cp -- "$COMPILACAO/kernel/bzImage" "$ambiente/opt/corelabs/vmlinuz-emergency"
+cp -- "$IMAGENS/corelabs-emergency.cpio.gz" "$ambiente/opt/corelabs/emergency.cpio.gz"
 cp -- "$saida.tmp/BOOTX64.EFI" "$ambiente/opt/corelabs/BOOTX64.EFI"
 (
     cd "$ambiente"
