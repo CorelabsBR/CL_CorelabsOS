@@ -217,17 +217,23 @@ gcc_final() {
     done
 }
 
+# glibc instala o loader em rtlddir=/lib64. Consolida os bytes produzidos pela
+# etapa no diretório de runtime antes de compilar o GCC final, que liga
+# libgcc_s.so contra esse interpretador. Isso também repara gerações retomadas
+# que já continham o link FHS, mas ainda não o arquivo de destino.
+publicar_loader() {
+    [[ -s "$build/glibc/elf/ld.so" ]] || erro "loader compilado ausente"
+    mkdir -p "$sysroot/usr/lib" "$sysroot/lib64"
+    if ! cmp -s "$build/glibc/elf/ld.so" "$sysroot/usr/lib/ld-linux-x86-64.so.2"; then
+        install -m0755 "$build/glibc/elf/ld.so" "$sysroot/usr/lib/ld-linux-x86-64.so.2"
+    fi
+    ln -sfn ../usr/lib/ld-linux-x86-64.so.2 "$sysroot/lib64/ld-linux-x86-64.so.2"
+}
+
 for etapa in preparar_fontes binutils_inicial gcc_inicial headers_linux glibc gcc_final; do
     executar_etapa "$etapa"
+    [[ "$etapa" != glibc ]] || publicar_loader
 done
-# glibc instala o loader em rtlddir=/lib64. Consolida os bytes produzidos pela
-# etapa no diretório de runtime antes de publicar o link FHS, inclusive ao
-# reaproveitar uma geração que já continha o link de uma construção anterior.
-[[ -s "$build/glibc/elf/ld.so" ]] || erro "loader compilado ausente"
-if ! cmp -s "$build/glibc/elf/ld.so" "$sysroot/usr/lib/ld-linux-x86-64.so.2"; then
-    install -m0755 "$build/glibc/elf/ld.so" "$sysroot/usr/lib/ld-linux-x86-64.so.2"
-fi
-ln -sfn ../usr/lib/ld-linux-x86-64.so.2 "$sysroot/lib64/ld-linux-x86-64.so.2"
 [[ -x "$toolchain/bin/$alvo-g++" && -f "$sysroot/usr/lib/libc.so.6" && \
     -f "$sysroot/usr/lib/libstdc++.so.6" ]] || erro "toolchain/runtime incompletos"
 printf '%s\n' "$cadeia" > "$base/.configuracao.sha256"
