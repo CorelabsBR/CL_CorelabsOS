@@ -24,24 +24,27 @@ qemu-img info --output=json "$disco" | grep -q '"format": "qcow2"' \
 
 mensagem "A instalação apagará as partições e os dados dentro de: $disco"
 mensagem "Nenhum disco físico do host será acessado."
-printf 'Digite exatamente INSTALAR CORELABS para continuar: '
+printf 'Digite exatamente INSTALAR Lithos para continuar: '
 read -r confirmacao
-[[ "$confirmacao" == "INSTALAR CORELABS" ]] || erro "instalação cancelada"
+[[ "$confirmacao" == "INSTALAR Lithos" ]] || erro "instalação cancelada"
 
 aceleracao=(-accel tcg,thread=multi -cpu max)
 [[ -r /dev/kvm && -w /dev/kvm ]] && aceleracao=(-accel kvm -cpu host)
 log="$LOGS/instalacao.log"
 set +e
-timeout --signal=TERM "$VM_TIMEOUT_TESTE" qemu-system-x86_64 \
+# QEMU precisa ler a senha pelo console serial. Sem --foreground, quando esta
+# pipeline roda a partir de um TTY, timeout cria outro process group; a leitura
+# de -serial stdio recebe SIGTTIN e timeout/QEMU ficam parados com log vazio.
+timeout --foreground --signal=TERM "$VM_TIMEOUT_TESTE" qemu-system-x86_64 \
     -machine q35 "${aceleracao[@]}" -m 1024 -smp 2 \
-    -kernel "$COMPILACAO/kernel/bzImage" -initrd "$IMAGENS/corelabs-instalador.cpio.gz" \
-    -append "console=ttyS0,115200 rdinit=/init corelabs.instalar=SIM" \
+    -kernel "$COMPILACAO/kernel/bzImage" -initrd "$IMAGENS/Lithos-instalador.cpio.gz" \
+    -append "console=ttyS0,115200 rdinit=/init Lithos.instalar=SIM" \
     -drive "if=none,file=$disco,format=qcow2,id=alvo" \
     -device virtio-blk-pci,drive=alvo -serial stdio -display none -no-reboot \
     2>&1 | tee "$log"
 codigo=${PIPESTATUS[0]}
 set -e
-if (( codigo == 0 )) && grep -q '^CORELABS_INSTALACAO_OK' "$log"; then
+if (( codigo == 0 )) && grep -q '^Lithos_INSTALACAO_OK' "$log"; then
     printf '%s\n' "$VM_RAIZ_UUID" > "$marcador"
     mensagem "Instalação concluída no disco virtual"
 else

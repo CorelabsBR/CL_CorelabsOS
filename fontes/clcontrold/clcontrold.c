@@ -12,9 +12,9 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-#define CAMINHO_SOCKET "/run/corelabs/control.sock"
-#define CAMINHO_PEDIDO "/run/corelabs/operacao"
-#define CAMINHO_LOCK   "/run/corelabs/encerrando"
+#define CAMINHO_SOCKET "/run/Lithos/control.sock"
+#define CAMINHO_PEDIDO "/run/Lithos/operacao"
+#define CAMINHO_LOCK   "/run/Lithos/encerrando"
 
 #define GID_ADMIN_PADRAO ((gid_t)10)
 #define TAMANHO_PEDIDO 32
@@ -104,7 +104,7 @@ static bool autorizado(int fd, struct ucred *credencial)
 static int solicitar_encerramento(const char *operacao)
 {
     /*
-     * O diretório /run/corelabs pertence ao root.
+     * O diretório /run/Lithos pertence ao root.
      * O daemon também executa como root.
      *
      * mkdir fornece exclusão atômica: apenas uma
@@ -182,7 +182,7 @@ static int criar_socket(void)
     strcpy(endereco.sun_path, CAMINHO_SOCKET);
 
     /*
-     * O daemon só deve iniciar depois que /run/corelabs
+     * O daemon só deve iniciar depois que /run/Lithos
      * tiver sido criado pelo PID 1.
      */
     struct stat estado;

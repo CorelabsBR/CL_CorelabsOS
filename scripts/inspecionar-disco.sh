@@ -10,7 +10,7 @@ source "$RAIZ/scripts/biblioteca.sh"
 source "$RAIZ/configuracao/vm.conf"
 
 disco="$MAQUINAS/$VM_DISCO"
-initramfs="$IMAGENS/corelabs-inspecao.cpio.gz"
+initramfs="$IMAGENS/Lithos-inspecao.cpio.gz"
 log="$LOGS/inspecao-disco.log"
 log_normalizado="${log}.normalizado"
 
@@ -59,25 +59,25 @@ set -e
 
 tr -d '\r' < "$log" > "$log_normalizado"
 
-if grep -q '^ERRO_INSPECAO_CORELABS:' "$log_normalizado"; then
-    grep '^ERRO_INSPECAO_CORELABS:' "$log_normalizado" >&2 || true
+if grep -q '^ERRO_INSPECAO_Lithos:' "$log_normalizado"; then
+    grep '^ERRO_INSPECAO_Lithos:' "$log_normalizado" >&2 || true
     erro "ambiente de inspeção reportou falha; consulte $log"
 fi
 
-grep -q '^INICIO_INSPECAO_CORELABS$' "$log_normalizado" ||
+grep -q '^INICIO_INSPECAO_Lithos$' "$log_normalizado" ||
     erro "marcador inicial ausente; consulte $log"
 
-grep -q '^FIM_INSPECAO_CORELABS$' "$log_normalizado" ||
+grep -q '^FIM_INSPECAO_Lithos$' "$log_normalizado" ||
     erro "marcador final ausente; consulte $log"
 
 resultado_fdisk="$(
-    sed -n 's/^RESULTADO_FDISK_CORELABS=\([0-9][0-9]*\)$/\1/p' \
+    sed -n 's/^RESULTADO_FDISK_Lithos=\([0-9][0-9]*\)$/\1/p' \
         "$log_normalizado" |
         tail -n 1
 )"
 
 resultado_blkid="$(
-    sed -n 's/^RESULTADO_BLKID_CORELABS=\([0-9][0-9]*\)$/\1/p' \
+    sed -n 's/^RESULTADO_BLKID_Lithos=\([0-9][0-9]*\)$/\1/p' \
         "$log_normalizado" |
         tail -n 1
 )"
@@ -99,7 +99,7 @@ case "$resultado_blkid" in
 esac
 
 sed -n \
-    '/^INICIO_INSPECAO_CORELABS$/,/^FIM_INSPECAO_CORELABS$/p' \
+    '/^INICIO_INSPECAO_Lithos$/,/^FIM_INSPECAO_Lithos$/p' \
     "$log_normalizado"
 
 rm -f -- "$log_normalizado"

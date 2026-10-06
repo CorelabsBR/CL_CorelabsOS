@@ -7,7 +7,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-#define CAMINHO_SOCKET "/run/corelabs/control.sock"
+#define CAMINHO_SOCKET "/run/Lithos/control.sock"
 #define TAMANHO_RESPOSTA 32
 
 static int operacao_valida(const char *operacao)

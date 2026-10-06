@@ -24,26 +24,26 @@ esperar_rejeicao() {
 }
 
 "$toolchain/bin/$BASE_ABI_ALVO-gcc" --sysroot="$sysroot" \
-    "$RAIZ/testes/base-abi/hello-corelabs.c" -pthread -ldl -lm \
+    "$RAIZ/testes/base-abi/hello-Lithos.c" -pthread -ldl -lm \
     -Wl,-rpath,/usr/lib/x86_64-linux-gnu -o "$temporario/usr/bin/fixture"
 esperar_rejeicao 'RPATH/RUNPATH não permitido'
 
 "$toolchain/bin/$BASE_ABI_ALVO-gcc" --sysroot="$sysroot" \
-    "$RAIZ/testes/base-abi/hello-corelabs.c" -pthread -ldl -lm \
+    "$RAIZ/testes/base-abi/hello-Lithos.c" -pthread -ldl -lm \
     '-Wl,-rpath,$ORIGIN' -o "$temporario/usr/bin/fixture"
 esperar_rejeicao 'RPATH/RUNPATH não permitido'
 
 "$toolchain/bin/$BASE_ABI_ALVO-gcc" --sysroot="$sysroot" \
-    "$RAIZ/testes/base-abi/hello-corelabs.c" -pthread -ldl -lm \
+    "$RAIZ/testes/base-abi/hello-Lithos.c" -pthread -ldl -lm \
     -Wl,--disable-new-dtags,-rpath,"$COMPILACAO" -o "$temporario/usr/bin/fixture"
 esperar_rejeicao 'RPATH/RUNPATH não permitido'
 
 "$toolchain/bin/$BASE_ABI_ALVO-gcc" --sysroot="$sysroot" \
-    "$RAIZ/testes/base-abi/hello-corelabs.c" -pthread -ldl -lm \
+    "$RAIZ/testes/base-abi/hello-Lithos.c" -pthread -ldl -lm \
     -Wl,--dynamic-linker=/lib/loader-externo.so -o "$temporario/usr/bin/fixture"
-esperar_rejeicao 'PT_INTERP não Corelabs'
+esperar_rejeicao 'PT_INTERP não Lithos'
 
-cp "$COMPILACAO/testes-base-abi/hello-corelabs-cpp" "$temporario/usr/bin/fixture"
+cp "$COMPILACAO/testes-base-abi/hello-Lithos-cpp" "$temporario/usr/bin/fixture"
 mv "$temporario/usr/lib/libstdc++.so.6" "$temporario/libstdc++.so.6.guardada"
 esperar_rejeicao 'DT_NEEDED não resolvido'
 ln -s "$sysroot/usr/lib/libstdc++.so.6" "$temporario/usr/lib/libstdc++.so.6"

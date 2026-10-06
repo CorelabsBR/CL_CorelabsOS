@@ -20,7 +20,7 @@ nome_valido() { printf '%s\n' "$1" | grep -Eq '^[a-z0-9][a-z0-9+_.-]{0,127}$'; }
 root() { [ "$(id -u)" -eq 0 ] || erro 'este comando requer root'; }
 comandos() { for cmd in "$@"; do command -v "$cmd" >/dev/null 2>&1 || erro "comando ausente: $cmd"; done; }
 ajuda() {
-    printf '%s\n' 'Corelabs Package Manager 0.2' 'Uso: cpm <comando>' \
+    printf '%s\n' 'Lithos Package Manager 0.2' 'Uso: cpm <comando>' \
         '  update                 Atualiza índices HTTPS (root)' \
         '  search <termo>         Pesquisa nome/descrição no banco local' \
         '  info <pacote>          Mostra metadados e estado instalado' \
@@ -37,7 +37,7 @@ diretorio() {
 }
 lock() {
     root
-    comandos flock mktemp curl sha256sum awk grep sed stat realpath mkdir mv cp rm rmdir gzip xz bzip2 od cmp cat chmod tr uname sync wc
+    comandos flock mktemp curl openssl sha256sum awk grep sed stat realpath mkdir mv cp rm rmdir gzip xz bzip2 od cmp cat chmod tr uname sync wc
     [ -x "$HELPER" ] || erro 'auxiliar CPM ausente'
     [ "$(realpath "$ROOT")" = "$ROOT" ] || erro 'CPM_ROOT deve ser um diretório real canônico'
     "$HELPER" root "$ROOT"
@@ -134,7 +134,7 @@ configuracao() {
     { sub(/\r$/,""); sub(/^[ \t]+/,""); sub(/[ \t]+$/,"") }
     /^($|#|;)/ { next }
     /^\[/ {
-      emit(); if ($0 !~ /^\[[a-z0-9][a-z0-9_.-]*\]$/) bad("seção")
+      emit(); if ($0 !~ /^\[[A-Za-z0-9][A-Za-z0-9_.-]*\]$/) bad("seção")
       name=substr($0,2,length($0)-2); server=""; enabled="yes"; sig="Required"; delete keys; next
     }
     {
@@ -175,24 +175,38 @@ baixar() {
         --tlsv1.2 --connect-timeout 10 --max-time 60 --max-filesize 536870912 --output "$2" "$1" || erro "download falhou: $1"
 }
 assinatura() {
-    policy=$1 url=$2 sigfile=$3
-    [ "$policy" = Optional ] || erro 'SigLevel=Required: verificador e chave oficial confiável ainda não estão disponíveis no CPM 0.2'
+    policy=$1 repo=$2 url=$3 objeto=$4 sigfile=$5
+    key="${ROOT%/}/etc/cpm/keyrings/$repo.pem"
     status=$(curl --silent --show-error --location --proto '=https' --proto-redir '=https' \
         --tlsv1.2 --connect-timeout 10 --max-time 30 --max-filesize 65536 \
         --output "$sigfile" --write-out '%{http_code}' "$url.sig") || erro 'falha ao consultar assinatura'
     case "$status" in
-        404) aviso 'Optional: objeto sem assinatura; HTTPS/SHA-256 não substituem autenticidade criptográfica'; rm -- "$sigfile" ;;
-        200) erro 'assinatura presente, mas verificação criptográfica não está disponível; recusando objeto' ;;
+        404)
+            rm -- "$sigfile"
+            [ "$policy" = Optional ] || erro "assinatura obrigatória ausente: $url.sig"
+            aviso 'Optional: objeto sem assinatura; autenticidade criptográfica não verificada'
+            return 0
+            ;;
+        200) ;;
         *) erro "consulta de assinatura retornou HTTP $status" ;;
     esac
+    [ -f "$key" ] && [ ! -L "$key" ] || erro "chave pública confiável ausente: $key"
+    [ "$(stat -c %u "$key")" = 0 ] || erro "owner da chave pública deve ser root: $key"
+    mode=$(stat -c %a "$key")
+    case "$mode" in 444|440|400|644|640|600) ;; *) erro "permissões inseguras na chave pública: $key ($mode)";; esac
+    [ "$(wc -c < "$sigfile")" -le 1024 ] || erro 'assinatura excede o limite permitido'
+    openssl pkeyutl -verify -pubin -inkey "$key" -rawin -digest sha256 \
+        -pkeyopt rsa_padding_mode:pss -pkeyopt rsa_pss_saltlen:digest \
+        -in "$objeto" -sigfile "$sigfile" \
+        >/dev/null 2>&1 || erro "assinatura criptográfica inválida: $url"
 }
 update() {
     lock; WORK=$(mktemp -d "$CACHE/.update.XXXXXX")
     repos > "$WORK/repos" || erro 'configuração de repositórios inválida'
     while IFS='|' read -r repo server policy; do
         [ -n "$repo" ] || continue
-        assinatura "$policy" "${server%/}/index" "$WORK/$repo.sig"
         baixar "${server%/}/index" "$WORK/$repo.index"
+        assinatura "$policy" "$repo" "${server%/}/index" "$WORK/$repo.index" "$WORK/$repo.sig"
         validar_indice "$WORK/$repo.index"
     done < "$WORK/repos"
     while IFS='|' read -r repo server policy; do
@@ -280,8 +294,8 @@ EOF
 $source
 EOF
     transacao "$name" install
-    assinatura "$policy" "${server%/}/packages/$file" "$STAGE/package.sig"
     baixar "${server%/}/packages/$file" "$STAGE/package.cpm"
+    assinatura "$policy" "$repo" "${server%/}/packages/$file" "$STAGE/package.cpm" "$STAGE/package.sig"
     printf '%s  %s\n' "$hash" "$STAGE/package.cpm" | sha256sum --check --status || erro 'SHA-256 do pacote incorreto'
     [ ! -L "$CACHE/$hash-$file" ] || erro 'cache é symlink'
     mv "$STAGE/package.cpm" "$CACHE/$hash-$file"

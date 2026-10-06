@@ -45,8 +45,8 @@ int main(int argc, char **argv) {
         if (getaddrinfo("example.com", "443", NULL, &addresses) != 0)
             return 4;
         freeaddrinfo(addresses);
-        puts("hello-corelabs C: NSS files/DNS OK");
+        puts("hello-Lithos C: NSS files/DNS OK");
     }
-    printf("hello-corelabs C: glibc %s; signal/pthread/dlopen/libm OK\n", gnu_get_libc_version());
+    printf("hello-Lithos C: glibc %s; signal/pthread/dlopen/libm OK\n", gnu_get_libc_version());
     return strcmp(gnu_get_libc_version(), "2.44") != 0;
 }

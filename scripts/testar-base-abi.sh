@@ -23,11 +23,11 @@ while IFS= read -r linha; do
         erro "include externo ao target: $caminho"
 done < <(sed -n '/#include <...> search starts here:/,/End of search list./p' "$saida/include-search.log")
 "$toolchain/bin/$BASE_ABI_ALVO-gcc" --sysroot="$sysroot" -O2 -pthread \
-    "$RAIZ/testes/base-abi/hello-corelabs.c" -ldl -lm -Wl,-t \
-    -o "$saida/hello-corelabs" > "$saida/c-link.log" 2>&1
+    "$RAIZ/testes/base-abi/hello-Lithos.c" -ldl -lm -Wl,-t \
+    -o "$saida/hello-Lithos" > "$saida/c-link.log" 2>&1
 "$toolchain/bin/$BASE_ABI_ALVO-g++" --sysroot="$sysroot" -O2 -pthread \
-    "$RAIZ/testes/base-abi/hello-corelabs-cpp.cc" -Wl,-t \
-    -o "$saida/hello-corelabs-cpp" > "$saida/cpp-link.log" 2>&1
+    "$RAIZ/testes/base-abi/hello-Lithos-cpp.cc" -Wl,-t \
+    -o "$saida/hello-Lithos-cpp" > "$saida/cpp-link.log" 2>&1
 for log in "$saida/c-link.log" "$saida/cpp-link.log"; do
     while IFS= read -r linha; do
         [[ "$linha" == /* ]] || continue
@@ -37,18 +37,18 @@ for log in "$saida/c-link.log" "$saida/cpp-link.log"; do
         [[ "$resolvido" == "$toolchain/"* || "$resolvido" == "$sysroot/"* ]] ||
             erro "input externo ao target no link: $linha"
     done < "$log"
-    grep -F "$sysroot/usr/lib/libc.so.6" "$log" >/dev/null || erro "libc Corelabs não aparece no link"
+    grep -F "$sysroot/usr/lib/libc.so.6" "$log" >/dev/null || erro "libc Lithos não aparece no link"
 done
-for programa in hello-corelabs hello-corelabs-cpp; do
+for programa in hello-Lithos hello-Lithos-cpp; do
     readelf -lW "$saida/$programa" > "$saida/$programa.readelf"
     readelf -dW "$saida/$programa" >> "$saida/$programa.readelf"
     grep -F '/lib64/ld-linux-x86-64.so.2' "$saida/$programa.readelf" >/dev/null || erro "PT_INTERP incorreto"
     grep -F 'Shared library: [libc.so.6]' "$saida/$programa.readelf" >/dev/null || erro "libc ausente"
 done
 for biblioteca in libstdc++.so.6 libgcc_s.so.1; do
-    grep -F "Shared library: [$biblioteca]" "$saida/hello-corelabs-cpp.readelf" >/dev/null ||
+    grep -F "Shared library: [$biblioteca]" "$saida/hello-Lithos-cpp.readelf" >/dev/null ||
         erro "runtime C++ ausente: $biblioteca"
 done
 "$RAIZ/scripts/auditar-elf.sh" "$COMPILACAO/rootfs"
 mensagem "Provas C/C++ compiladas com inputs exclusivos do target: $saida"
-mensagem "A execução deve ocorrer no Corelabs; estes checks não executam os ELF no Ubuntu."
+mensagem "A execução deve ocorrer no Lithos; estes checks não executam os ELF no Ubuntu."

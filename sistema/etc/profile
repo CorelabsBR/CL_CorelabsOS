@@ -1,4 +1,4 @@
-# Ambiente global de sessão do Corelabs OS.
+# Ambiente global de sessão do Lithos.
 
 export PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
 

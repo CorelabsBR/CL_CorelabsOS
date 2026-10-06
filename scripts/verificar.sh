@@ -44,7 +44,7 @@ verificar_hash "$FONTES/busybox-$BUSYBOX_VERSAO.tar.bz2" "$BUSYBOX_SHA256"
     verificar_hash "$FONTES/util-linux-$UTIL_LINUX_VERSAO.tar.xz" "$UTIL_LINUX_SHA256"
 
 kernel="$COMPILACAO/kernel/bzImage"
-initramfs="$IMAGENS/corelabs-initramfs.cpio.gz"
+initramfs="$IMAGENS/Lithos-initramfs.cpio.gz"
 disco="$MAQUINAS/$VM_DISCO"
 [[ -s "$kernel" ]] && file "$kernel" | grep -q 'Linux kernel x86 boot executable' \
     && ok "kernel x86 válido" || falhou "kernel compilado inválido ou ausente"
@@ -58,12 +58,12 @@ if [[ -s "$initramfs" ]] && gzip -t "$initramfs"; then
 else
     falhou "initramfs inválido ou ausente"
 fi
-if [[ -s "$IMAGENS/corelabs-instalador.cpio.gz" ]]; then
-    gzip -t "$IMAGENS/corelabs-instalador.cpio.gz" \
+if [[ -s "$IMAGENS/Lithos-instalador.cpio.gz" ]]; then
+    gzip -t "$IMAGENS/Lithos-instalador.cpio.gz" \
         && ok "initramfs instalador válido" || falhou "initramfs instalador corrompido"
 fi
-if [[ -s "$IMAGENS/corelabs-initramfs-disco.cpio.gz" ]]; then
-    gzip -t "$IMAGENS/corelabs-initramfs-disco.cpio.gz" \
+if [[ -s "$IMAGENS/Lithos-initramfs-disco.cpio.gz" ]]; then
+    gzip -t "$IMAGENS/Lithos-initramfs-disco.cpio.gz" \
         && ok "initramfs de transição válido" || falhou "initramfs de transição corrompido"
 fi
 if [[ -f "$disco" ]] && qemu-img info --output=json "$disco" | grep -q '"format": "qcow2"'; then
@@ -86,11 +86,11 @@ if (( falhas == 0 )); then
     codigo=$?
     set -e
 
-    grep -q 'Corelabs OS' "$log_teste" \
+    grep -q 'Lithos' "$log_teste" \
         && ok "banner exibido" \
         || falhou "banner não apareceu no boot"
 
-    grep -Eq 'corelabs login:|login:' "$log_teste" \
+    grep -Eq 'Lithos login:|login:' "$log_teste" \
         && ok "getty/login disponível no console serial" \
         || falhou "prompt de login não apareceu no console serial"
 

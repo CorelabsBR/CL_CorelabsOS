@@ -78,7 +78,7 @@ static int reserved(const char *p) {
                          "/etc/shadow",
                          "/etc/sudoers",
                          "/etc/fstab",
-                         "/usr/share/corelabs/base-abi-v1.sha256",
+                         "/usr/share/Lithos/base-abi-v1.sha256",
                          NULL};
   for (int i = 0; trees[i]; i++) {
     size_t n = strlen(trees[i]);
@@ -433,7 +433,7 @@ static int owned(const char *file, const char *path, const char *pkg) {
   return result;
 }
 static int abi_file(int root, const char *path) {
-  int fd = openat(root, "usr/share/corelabs/base-abi-v1.sha256",
+  int fd = openat(root, "usr/share/Lithos/base-abi-v1.sha256",
                   O_RDONLY | O_NOFOLLOW);
   if (fd < 0) {
     if (errno == ENOENT)

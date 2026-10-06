@@ -41,20 +41,20 @@ raiz = pathlib.Path(sys.argv[1])
 temporario = pathlib.Path(sys.argv[2])
 
 arquivos = {
-    "inicializacao.sh": raiz / "sistema/etc/corelabs/inicializacao.sh",
-    "encerramento.sh": raiz / "sistema/etc/corelabs/encerramento.sh",
+    "inicializacao.sh": raiz / "sistema/etc/Lithos/inicializacao.sh",
+    "encerramento.sh": raiz / "sistema/etc/Lithos/encerramento.sh",
 }
 
 for nome, origem in arquivos.items():
     conteudo = origem.read_text()
 
     conteudo = conteudo.replace(
-        "/etc/corelabs/servicos",
+        "/etc/Lithos/servicos",
         str(temporario / "servicos"),
     )
 
     conteudo = conteudo.replace(
-        "/usr/lib/corelabs/registro.sh",
+        "/usr/lib/Lithos/registro.sh",
         str(temporario / "bibliotecas/registro.sh"),
     )
 

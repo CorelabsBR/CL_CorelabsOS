@@ -1,12 +1,12 @@
-PRETTY_NAME="Corelabs OS 0.5 Nexus"
-NAME="Corelabs OS"
+PRETTY_NAME="Lithos 0.5 Nexus"
+NAME="Lithos"
 VERSION_ID="0.5"
 VERSION="0.5 (Nexus)"
 VERSION_CODENAME=nexus
-ID=corelabs
+ID=Lithos
 BUILD_ID=20260924
 ANSI_COLOR="0;31"
 HOME_URL="https://corelabs.dev.br/"
 SUPPORT_URL="https://corelabs.dev.br/contato/"
-BUG_REPORT_URL="https://github.com/girellidev"
-LOGO=corelabs-logo
+BUG_REPORT_URL="https://github.com/corelabsbr"
+LOGO=Lithos-logo

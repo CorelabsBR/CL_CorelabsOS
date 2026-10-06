@@ -1,10 +1,10 @@
-# Toolchain GNU do Corelabs OS
+# Toolchain GNU do Lithos
 
 ## Estado real
 
-O pipeline atual implementa a [Corelabs Base ABI v1](base-abi-v1.md): toolchain cruzada GNU própria, sysroot e runtime glibc/GCC, Coreutils e um subset do util-linux dinâmicos. BusyBox 1.36.1, Bash e os componentes administrativos existentes continuam estáticos. O PID 1, supervisor e consoles próprios são preservados. As ferramentas do instalador continuam estáticas, com util-linux alinhado à versão 2.42.2.
+O pipeline atual implementa a [Lithos Base ABI v1](base-abi-v1.md): toolchain cruzada GNU própria, sysroot e runtime glibc/GCC, Coreutils e um subset do util-linux dinâmicos. BusyBox 1.36.1, Bash e os componentes administrativos existentes continuam estáticos. O PID 1, supervisor e consoles próprios são preservados. As ferramentas do instalador continuam estáticas, com util-linux alinhado à versão 2.42.2.
 
-A toolchain executa no host, mas produz binários para o sysroot Corelabs. O manifesto descreve o bootstrap, hashes, layout, auditoria de ELF e os limites da validação. A instalação de uma toolchain nativa dentro do Corelabs e a execução integral das suítes GNU não estão implícitas nesta base.
+A toolchain executa no host, mas produz binários para o sysroot Lithos. O manifesto descreve o bootstrap, hashes, layout, auditoria de ELF e os limites da validação. A instalação de uma toolchain nativa dentro do Lithos e a execução integral das suítes GNU não estão implícitas nesta base.
 
 ## Referência histórica de expansão
 
@@ -13,7 +13,7 @@ A referência de versões é o Linux From Scratch 13.1. As versões estão regis
 A implementação deverá seguir estas barreiras verificáveis:
 
 1. Baixar cada arquivo das origens oficiais e registrar SHA-256 antes da extração.
-2. Construir Binutils e GCC do primeiro passe com alvo `x86_64-corelabs-linux-gnu` em um prefixo isolado.
+2. Construir Binutils e GCC do primeiro passe com alvo `x86_64-Lithos-linux-gnu` em um prefixo isolado.
 3. Instalar cabeçalhos do kernel e construir glibc contra esses cabeçalhos.
 4. Construir libstdc++ e as ferramentas temporárias sem buscar bibliotecas do host em tempo de execução.
 5. Entrar em um ambiente isolado com `/dev`, `/proc`, `/sys` e `/run` próprios para construir o sistema final.

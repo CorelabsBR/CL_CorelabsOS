@@ -1,7 +1,7 @@
-# Corelabs Package Manager 0.2
+# Lithos Package Manager 0.2
 
-A CPM usa a Corelabs Base ABI v1, x86_64. O frontend é POSIX sh e o auxiliar
-`/usr/libexec/cpm/arquivo` é C, compilado pela toolchain Corelabs, ligado à glibc
+A CPM usa a Lithos Base ABI v1, x86_64. O frontend é POSIX sh e o auxiliar
+`/usr/libexec/cpm/arquivo` é C, compilado pela toolchain Lithos, ligado à glibc
 do próprio sistema. Não instala runtime do host nem requer Python no alvo.
 
 ## Comandos
@@ -23,26 +23,41 @@ Somente a variável literal `$arch` é expandida, usando `uname -m` (x86_64).
 Servidores devem ser HTTPS, sem credenciais, query ou construções de shell.
 
 ```ini
-[corelabs]
+[Lithos]
 Server = https://archive.corelabs.dev.br/cpm/v1/$arch
 Enabled = yes
-SigLevel = Optional
+SigLevel = Required
 ```
 
-**Política temporária de bootstrap:** Optional permite objetos sem assinatura
-somente quando a consulta HTTPS de `<URL>.sig` retorna 404. Exibe aviso explícito.
-Assinatura presente (200), falha de rede ou outro status são recusados. HTTPS
-valida certificado; SHA-256 valida integridade conforme o índice, mas nenhum
-deles equivale à assinatura criptográfica do editor. Nunca se usa curl -k.
+Cada repositório usa a chave pública PEM
+`/etc/cpm/keyrings/<identificador>.pem`. Ela deve ser arquivo regular de root,
+com modo no máximo 0644. A chave não é baixada pelo próprio repositório, não há
+TOFU e uma chave ausente, incorreta ou insegura aborta a operação.
 
-Required é o padrão quando omitido e **falha fechado nesta versão**, pois não há
-verificador criptográfico nem chave pública oficial confiável operacional.
-`/etc/cpm/keyrings/` é criado, mas não se gera chave privada, baixa/confia
-automaticamente em chave ou faz TOFU. Para ativar Required de maneira funcional,
-é necessário implementar e testar verificação real de índice/pacote, definir o
-formato de assinatura e provisionar chave pública por canal confiável independente;
-somente então trocar Optional por Required. A simples troca hoje bloqueia update
-e install deliberadamente. Não há GnuPG instalado por esta implementação.
+`<objeto>.sig` é uma assinatura destacada RSA-PSS/SHA-256 dos bytes exatos do
+objeto, com salt de 32 bytes. O CPM baixa o objeto e a assinatura para staging,
+verifica com OpenSSL 3.5.4 e somente então interpreta o índice ou confere o
+SHA-256 do pacote. Assinatura ausente ou inválida sob Required aborta sem publicar
+estado. Optional só aceita ausência quando o servidor responde 404 e emite aviso;
+assinatura presente sempre precisa ser válida. Falha de rede/status diferente de
+200/404 nunca vira downgrade. Nunca se usa `curl -k`.
+
+### Operação externa de release
+
+A chave privada deve ser criada e guardada em infraestrutura de release separada;
+ela não pode entrar no Git, imagem, archive público, cliente, pacote ou logs. Exemplo
+de assinatura (os paths da chave são deliberadamente externos ao projeto):
+
+```sh
+openssl pkeyutl -sign -inkey /cofre/release-private.pem -rawin -digest sha256 \
+  -pkeyopt rsa_padding_mode:pss -pkeyopt rsa_pss_saltlen:digest \
+  -in index -out index.sig
+```
+
+O mesmo procedimento assina cada `.cpm`. Publique o objeto e seu `.sig`; provisione
+previamente apenas a chave pública correspondente como `Lithos.pem` por canal
+confiável da imagem/release. A chave oficial ainda não está disponível neste
+repositório: por isso o cliente oficial Required falha fechado até a etapa externa.
 
 ## Índice, banco e cache
 
@@ -146,7 +161,7 @@ não dispensam checagens de proprietário, root, ancestral ou archive.
 
 No alvo: sh, awk, grep, sed, stat, realpath, mkdir, mv, cp, rm, rmdir, mktemp,
 cat, chmod, tr, uname, id, od, cmp, wc, gzip, xz, bzip2, sha256sum, sync e flock,
-todos do userspace existente (Coreutils/util-linux/BusyBox), mais curl da própria
+todos do userspace existente (Coreutils/util-linux/BusyBox), mais curl e openssl da própria
 Base ABI. Não requer tar externo para extrair pacotes. O pipeline compila e audita
 o helper ELF; a normalização de diretórios no rootfs evita herdar umask do checkout.
 

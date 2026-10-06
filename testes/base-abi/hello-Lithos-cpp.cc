@@ -12,7 +12,7 @@ int main() {
     try {
         throw std::runtime_error("exception/unwind OK");
     } catch (const std::exception &error) {
-        std::cout << "hello-corelabs C++: " << sum << "; " << error.what()
+        std::cout << "hello-Lithos C++: " << sum << "; " << error.what()
                   << "; libstdc++/thread OK\n";
     }
     return sum == 42 ? 0 : 1;

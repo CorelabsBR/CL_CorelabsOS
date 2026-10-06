@@ -6,8 +6,8 @@ export PS1='CMS
 # '
 
 echo
-echo "Corelabs OS 0.5 Nexus"
-echo "Corelabs Emergency Shell"
+echo "Lithos 0.5 Nexus"
+echo "Lithos Emergency Shell"
 echo
 
 mkdir -p /proc /sys /dev /dev/pts /run /mnt/root

@@ -1,4 +1,4 @@
-# Corelabs Base ABI v1
+# Lithos Base ABI v1
 
 Estado: implementada e validada em instalação descartável, com boot UEFI/GRUB,
 provas C/C++, rede/HTTPS, autenticação e Emergency Shell. Resultados e limites
@@ -9,7 +9,7 @@ em [validacao-base-abi-v1.md](validacao-base-abi-v1.md).
 | Item | Valor |
 | --- | --- |
 | Arquitetura | x86_64, little-endian, ELF64, GNU/glibc, somente 64 bits |
-| Target GNU | `x86_64-corelabs-linux-gnu` |
+| Target GNU | `x86_64-Lithos-linux-gnu` |
 | libc | glibc 2.44 + upstream_fixes-2 e FHS do LFS |
 | Loader ELF | `/lib64/ld-linux-x86-64.so.2` |
 | Compilador e runtime | GCC 16.2.0, C/C++, libgcc_s, libstdc++, libatomic |
@@ -20,35 +20,35 @@ em [validacao-base-abi-v1.md](validacao-base-abi-v1.md).
 | Headers Linux | 6.12.111, exportados do source controlado pelo projeto |
 | Kernel mínimo da glibc | Linux 5.10; kernel ativo permanece 6.12.111 |
 
-`corelabs` é o campo vendor do triple GNU, aceito pelo `config.sub` dos sources.
+`Lithos` é o campo vendor do triple GNU, aceito pelo `config.sub` dos sources.
 CPU e sistema permanecem `x86_64` e `linux-gnu`. O triple diferente do host força
 compilação cruzada, mesmo quando ambos usam CPU x86_64. Nenhuma extensão própria
 é adicionada à ABI ELF, à convenção de chamada ou ao formato das bibliotecas.
 
 ## Construção e separação do host
 
-`./corelabs.sh base-abi` constrói a plataforma; `./corelabs.sh rootfs` a integra
+`./Lithos.sh base-abi` constrói a plataforma; `./Lithos.sh rootfs` a integra
 automaticamente e regenera o initramfs. Logs ficam em
 `compilacao/logs/base-abi-*.log`. As dependências adicionais do host são GNU awk,
 Texinfo, patch e Python 3. GMP/MPFR/MPC são fontes fixadas e compiladas dentro do
-GCC para bootstrap, sem bibliotecas desses componentes no runtime Corelabs.
+GCC para bootstrap, sem bibliotecas desses componentes no runtime Lithos.
 
 O pipeline é:
 
-1. Binutils cruzado com `--with-sysroot` e target Corelabs.
+1. Binutils cruzado com `--with-sysroot` e target Lithos.
 2. GCC C inicial sem headers/libc, libgcc estático para construir glibc,
    com PIE/SSP padrão e Binutils cruzado disponível durante configure e make.
 3. `make headers_install` do kernel 6.12.111 no sysroot; não recompila o kernel.
 4. glibc cruzada com os headers e o GCC inicial. Instalação com `DESTDIR`.
 5. GCC C/C++ final cruzado, agora com libc/headers completos: libgcc_s,
-   libstdc++ e libatomic compilados para Corelabs. PIE/SSP habilitados por padrão.
+   libstdc++ e libatomic compilados para Lithos. PIE/SSP habilitados por padrão.
 6. Coreutils e util-linux compilados pelo GCC final contra o sysroot.
 7. Seleção dos runtimes e auditoria ELF antes de publicar o rootfs.
 
-A toolchain executa no host para construir programas Corelabs. Ela não é um
+A toolchain executa no host para construir programas Lithos. Ela não é um
 compilador nativo instalado dentro do sistema; seus executáveis podem depender
-do host. Seus **produtos target** usam exclusivamente o sysroot Corelabs.
-Construir um GCC nativo dentro do Corelabs não faz parte deste contrato.
+do host. Seus **produtos target** usam exclusivamente o sysroot Lithos.
+Construir um GCC nativo dentro do Lithos não faz parte deste contrato.
 
 `compilacao/toolchain` e `compilacao/sysroot` são links para uma geração de
 `compilacao/base-abi/<hash>/`. O hash inclui versões, hashes das fontes/patches e
@@ -85,7 +85,7 @@ Rootfs de runtime:
 - `ldconfig` da glibc em `/usr/sbin`; busca padrão das bibliotecas em `/usr/lib`.
 - `getconf`, `getent`, `iconv` e módulos `gconv` construídos com a glibc própria.
 - `/etc/nsswitch.conf`: identidades por arquivos e hosts por arquivos/DNS.
-- `/usr/share/corelabs/base-abi-v1.sha256`: fingerprints do runtime produzido.
+- `/usr/share/Lithos/base-abi-v1.sha256`: fingerprints do runtime produzido.
 
 Desde glibc 2.34, funções de libpthread/libdl estão integradas à libc. As
 bibliotecas de compatibilidade `libpthread.so.0` e `libdl.so.2` continuam
@@ -97,7 +97,7 @@ DT_NEEDED. Isso não significa falta de suporte a threads/dlopen.
 Coreutils usa `--prefix=/usr --libexecdir=/usr/libexec --disable-nls`, sem
 GMP, libcap, ACLs, atributos estendidos, OpenSSL ou SELinux. `kill` e `uptime` permanecem BusyBox. São
 instalados os demais comandos normais do pacote, sem substituir su/sudo ou os
-wrappers de encerramento do Corelabs.
+wrappers de encerramento do Lithos.
 
 Util-linux usa `--disable-all-programs` e habilita somente libuuid, libblkid,
 libmount (dependência obrigatória de lsblk), libsmartcols, uuidgen e lsblk. Bibliotecas compartilhadas,
@@ -145,7 +145,7 @@ contra os SHA-256 fixados antes da extração.
 
 ## Auditoria e provas
 
-`./corelabs.sh auditar-elf` usa readelf, sem executar `ldd` do host. Verifica
+`./Lithos.sh auditar-elf` usa readelf, sem executar `ldd` do host. Verifica
 ELF64/x86_64, PT_INTERP exato, DT_NEEDED sem paths e resolvido somente no rootfs,
 ausência de RPATH/RUNPATH externo e fingerprints do runtime. Somente os módulos
 oficiais em `/usr/lib/gconv` podem usar o valor exato `$ORIGIN`, como previsto
@@ -154,11 +154,11 @@ interno; não permite listas, `$ORIGIN/..` ou essa exceção em outros ELF.
 Essa exceção exige módulo `.so` sem PT_INTERP e listado no manifest verificado.
 Links resolvidos para fora do rootfs são rejeitados.
 
-`scripts/testar-base-abi.sh` compila `testes/base-abi/hello-corelabs.c` e
-`hello-corelabs-cpp.cc`, salva readelf e traces do linker em
+`scripts/testar-base-abi.sh` compila `testes/base-abi/hello-Lithos.c` e
+`hello-Lithos-cpp.cc`, salva readelf e traces do linker em
 `compilacao/testes-base-abi/`. As provas exercitam glibc 2.44, libm via dlopen,
 sigaction/raise, pthread, libstdc++, threads C++ e exceções/unwind. Os executáveis de prova não
-entram no rootfs de produção. Devem ser executados dentro da VM Corelabs.
+entram no rootfs de produção. Devem ser executados dentro da VM Lithos.
 
 `scripts/testar-auditoria-abi.sh` cria fixtures descartáveis e exige rejeição de
 RUNPATH Ubuntu, ORIGIN fora de gconv, RPATH de build, loader estrangeiro, biblioteca ausente,

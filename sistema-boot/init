@@ -60,7 +60,7 @@ done
 mount -t ext4 -o rw "$dispositivo" /nova-raiz || falha "não foi possível montar $dispositivo"
 [ -x /nova-raiz/init ] || falha "o sistema instalado não contém /init"
 
-echo "Corelabs OS: raiz persistente montada de $dispositivo"
+echo "Lithos: raiz persistente montada de $dispositivo"
 umount /sys /proc
 exec switch_root /nova-raiz /init
 

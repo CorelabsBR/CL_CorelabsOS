@@ -5,9 +5,9 @@ case "${1:-}" in
     start)
         mkdir -p \
             /run/lock \
-            /run/corelabs \
+            /run/Lithos \
             /var/log \
-            /var/log/corelabs \
+            /var/log/Lithos \
             /var/tmp
 
         chmod 1777 /var/tmp
@@ -22,9 +22,9 @@ case "${1:-}" in
     status)
         for diretorio in \
             /run/lock \
-            /run/corelabs \
+            /run/Lithos \
             /var/log \
-            /var/log/corelabs \
+            /var/log/Lithos \
             /var/tmp
         do
             [ -d "$diretorio" ] || {

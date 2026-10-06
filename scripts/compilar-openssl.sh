@@ -14,10 +14,11 @@ hash_config="$({
         "OPENSSL_VERSAO=$OPENSSL_VERSAO" \
         "STATIC=y" \
         "MODULES=n" \
+        "APPS=openssl" \
         "COMPRESSION=n"
 } | sha256sum | cut -d' ' -f1)"
 
-for comando in curl sha256sum tar make gcc perl; do exigir_comando "$comando"; done
+for comando in curl sha256sum tar make gcc perl readelf strip; do exigir_comando "$comando"; done
 preparar_diretorios
 baixar_verificado "$OPENSSL_URL" "$arquivo" "$OPENSSL_SHA256"
 
@@ -26,7 +27,7 @@ if [[ ! -d "$arvore" ]]; then
     tar -C "$FONTES" -xf "$arquivo"
 fi
 
-if [[ -f "$saida/usr/lib64/libssl.a" && -f "$marca" && "$(<"$marca")" == "$hash_config" ]]; then
+if [[ -f "$saida/usr/lib64/libssl.a" && -x "$saida/usr/bin/openssl" && -f "$marca" && "$(<"$marca")" == "$hash_config" ]]; then
     mensagem "OpenSSL já está atualizado"
     exit 0
 fi
@@ -36,16 +37,20 @@ rm -rf -- "$saida.tmp"
 mkdir -p -- "$saida.tmp/build" "$saida.tmp/install"
 (
     cd "$saida.tmp/build"
-    "$arvore/Configure" linux-x86_64 \
+    LDFLAGS=-static "$arvore/Configure" linux-x86_64 \
         --prefix=/usr \
         --libdir=lib64 \
-        no-shared no-module no-tests no-apps no-docs \
+        no-shared no-module no-tests no-docs \
         no-zlib no-zstd no-legacy
     make -j"$(numero_trabalhos)" build_sw
     make install_sw DESTDIR="$saida.tmp/install"
 )
 
 [[ -f "$saida.tmp/install/usr/lib64/libssl.a" ]] || erro "libssl.a não foi produzida"
+[[ -x "$saida.tmp/install/usr/bin/openssl" ]] || erro "openssl não foi produzido"
+readelf -l "$saida.tmp/install/usr/bin/openssl" | grep -q INTERP &&
+    erro "openssl possui interpretador dinâmico"
+strip --strip-unneeded "$saida.tmp/install/usr/bin/openssl"
 rm -rf -- "$saida"
 mv -- "$saida.tmp/install" "$saida"
 printf '%s\n' "$hash_config" > "$marca"

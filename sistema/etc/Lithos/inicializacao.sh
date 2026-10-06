@@ -2,21 +2,21 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
-diretorio=/etc/corelabs/servicos
+diretorio=/etc/Lithos/servicos
 falhas=0
 
-if [ -r /usr/lib/corelabs/registro.sh ]; then
-    . /usr/lib/corelabs/registro.sh
+if [ -r /usr/lib/Lithos/registro.sh ]; then
+    . /usr/lib/Lithos/registro.sh
 fi
 
 registrar() {
-    if command -v corelabs_registrar >/dev/null 2>&1; then
-        corelabs_registrar "BOOT" "$1" "inicializacao.log" ||
-            echo "[Corelabs] Aviso: falha ao registrar inicialização." >&2
+    if command -v Lithos_registrar >/dev/null 2>&1; then
+        Lithos_registrar "BOOT" "$1" "inicializacao.log" ||
+            echo "[Lithos] Aviso: falha ao registrar inicialização." >&2
     fi
 }
 
-echo "[Corelabs] Inicializando serviços..."
+echo "[Lithos] Inicializando serviços..."
 registrar "Inicialização dos serviços iniciada."
 
 for servico in "$diretorio"/*; do
@@ -29,21 +29,21 @@ for servico in "$diretorio"/*; do
         *.disabled) continue ;;
     esac
 
-    echo "[Corelabs] Iniciando: $nome"
+    echo "[Lithos] Iniciando: $nome"
     registrar "Iniciando serviço: $nome"
 
     if "$servico" start; then
-        echo "[Corelabs] OK: $nome"
+        echo "[Lithos] OK: $nome"
         registrar "Serviço iniciado: $nome"
     else
         resultado=$?
-        echo "[Corelabs] FALHA: $nome (código $resultado)"
+        echo "[Lithos] FALHA: $nome (código $resultado)"
         registrar "Falha no serviço: $nome (código $resultado)"
         falhas=$((falhas + 1))
     fi
 done
 
-echo "[Corelabs] Inicialização concluída. Falhas: $falhas"
+echo "[Lithos] Inicialização concluída. Falhas: $falhas"
 registrar "Inicialização concluída. Falhas: $falhas"
 
 [ "$falhas" -eq 0 ]

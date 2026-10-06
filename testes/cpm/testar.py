@@ -24,17 +24,43 @@ for name, source in [('curl', 'mock-curl.py'), ('id', 'mock-id.sh'), ('stat', 'm
     (BIN / name).chmod(0o755)
 ENV = dict(os.environ, PATH=f'{BIN}:{os.environ["PATH"]}', CPM_ROOT=str(ROOT),
            CPM_ARCHIVER=str(REPO / 'compilacao/cpm/arquivo-host-testes'), CPM_TEST_SERVER=str(SERVER.parent))
-CONFIG = ROOT / 'etc/cpm/repos.d/corelabs.repo'
+CONFIG = ROOT / 'etc/cpm/repos.d/Lithos.repo'
 CONFIG.parent.mkdir(parents=True)
-CONFIG.write_text('[corelabs]\n Server = https://fixtures.invalid/$arch\nEnabled = yes\nSigLevel = Optional\n')
+CONFIG.write_text('[Lithos]\n Server = https://fixtures.invalid/$arch\nEnabled = yes\nSigLevel = Required\n')
 CPM = ['sh', str(REPO / 'sistema/usr/bin/cpm')]
 INDEX = SERVER / 'index'
 INDEX.write_bytes(b'')
 tests = 0
 
+# Chave exclusivamente efêmera dos testes. A chave privada nunca entra no
+# repositório, rootfs, pacote ou servidor simulado.
+PRIVATE_KEY = AREA / 'test-release-private.pem'
+PUBLIC_KEY = ROOT / 'etc/cpm/keyrings/Lithos.pem'
+PUBLIC_KEY.parent.mkdir(parents=True)
+subprocess.run(['openssl', 'genpkey', '-algorithm', 'RSA', '-pkeyopt', 'rsa_keygen_bits:3072',
+                '-out', PRIVATE_KEY], check=True,
+               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+subprocess.run(['openssl', 'pkey', '-in', PRIVATE_KEY, '-pubout', '-out', PUBLIC_KEY], check=True,
+               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+PUBLIC_KEY.chmod(0o644)
+
+def sign_server():
+    objects = [INDEX]
+    if (SERVER / 'packages').is_dir():
+        objects.extend((SERVER / 'packages').glob('*.cpm'))
+    for obj in objects:
+        subprocess.run(['openssl', 'pkeyutl', '-sign', '-inkey', PRIVATE_KEY, '-rawin',
+                        '-digest', 'sha256', '-pkeyopt', 'rsa_padding_mode:pss',
+                        '-pkeyopt', 'rsa_pss_saltlen:digest',
+                        '-in', obj, '-out', str(obj) + '.sig'], check=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
 def run(*args, ok=True, text=None, env=None):
     global tests
-    p = subprocess.run(CPM + list(args), env=env or ENV, capture_output=True, text=True, timeout=20)
+    selected_env = env or ENV
+    if selected_env.get('CPM_TEST_NO_SIGN') != '1':
+        sign_server()
+    p = subprocess.run(CPM + list(args), env=selected_env, capture_output=True, text=True, timeout=20)
     if (p.returncode == 0) != ok or (text and text not in p.stdout + p.stderr):
         raise AssertionError(f'{args}: exit={p.returncode}\n{p.stdout}{p.stderr}')
     tests += 1
@@ -87,17 +113,31 @@ try:
     run('search', 'fastfetch')
     run('list')
     run('install', 'inexistente', ok=False)
-    before = (ROOT / 'var/lib/cpm/repos/corelabs/index').read_bytes()
+    before = (ROOT / 'var/lib/cpm/repos/Lithos/index').read_bytes()
     valid = package(mode='safe-link')
     for bad in ['x|y\n', valid.replace('x86_64|', 'aarch64|', 1), valid.replace('teste|', '../escape|', 1),
                 valid.replace('teste-1.0-1-x86_64.cpm', '../escape.cpm'), valid.replace('|1|', '|0|', 1)]:
         INDEX.write_text(bad)
         run('update', ok=False)
-        assert (ROOT / 'var/lib/cpm/repos/corelabs/index').read_bytes() == before
+        assert (ROOT / 'var/lib/cpm/repos/Lithos/index').read_bytes() == before
     INDEX.write_text(valid)
     run('update')
     run('search', 'TeStE', text='teste 1.0-1')
     run('info', 'teste', text='Installed: no')
+    # A assinatura deve detectar adulteração do pacote antes do SHA-256 e da
+    # descompressão. Preserve a assinatura válida e altere somente o objeto.
+    sign_server()
+    signed_package = SERVER / 'packages/teste-1.0-1-x86_64.cpm'
+    signed_package.write_bytes(signed_package.read_bytes() + b'alterado-depois-da-assinatura')
+    snap = db_snapshot()
+    run('install', 'teste', ok=False, text='assinatura criptográfica inválida',
+        env=dict(ENV, CPM_TEST_NO_SIGN='1'))
+    assert db_snapshot() == snap
+    assert not (ROOT / 'usr/share/teste').exists()
+    assert not list((ROOT / 'var/lib/cpm/transactions').iterdir())
+    assert not list((ROOT / 'var/cache/cpm/packages').glob('.txn.*'))
+    # Restaura a publicação válida; a próxima operação gera nova assinatura.
+    assert package(mode='safe-link') == valid
     run('install', 'teste')
     assert (ROOT / 'usr/share/teste/link').is_symlink()
     run('list', text='teste 1.0-1')
@@ -148,14 +188,27 @@ try:
     run('install', 'teste', ok=False)
     assert not (AREA / 'message.txt').exists()
     (ROOT / 'usr/share/teste').unlink()
-    # Required closed, Optional-present signature closed, disabled repo ignored.
+    # Required: assinatura ausente/inválida e chave incorreta falham fechado.
     oldconf = CONFIG.read_text()
-    CONFIG.write_text(oldconf.replace('Optional', 'Required'))
-    run('update', ok=False, text='Required')
-    CONFIG.write_text(oldconf)
-    (SERVER / 'index.sig').write_text('not a signature')
-    run('update', ok=False, text='assinatura presente')
+    (SERVER / 'index.sig').unlink(missing_ok=True)
+    run('update', ok=False, text='assinatura obrigatória ausente', env=dict(ENV, CPM_TEST_NO_SIGN='1'))
+    (SERVER / 'index.sig').write_bytes(b'not a signature')
+    run('update', ok=False, text='assinatura criptográfica inválida', env=dict(ENV, CPM_TEST_NO_SIGN='1'))
     (SERVER / 'index.sig').unlink()
+    wrong_private = AREA / 'wrong-private.pem'
+    subprocess.run(['openssl', 'genpkey', '-algorithm', 'RSA', '-pkeyopt', 'rsa_keygen_bits:3072',
+                    '-out', wrong_private], check=True,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(['openssl', 'pkey', '-in', wrong_private, '-pubout', '-out', PUBLIC_KEY], check=True,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    run('update', ok=False, text='assinatura criptográfica inválida')
+    subprocess.run(['openssl', 'pkey', '-in', PRIVATE_KEY, '-pubout', '-out', PUBLIC_KEY], check=True,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # Optional permanece possível apenas como escolha explícita do administrador.
+    CONFIG.write_text(oldconf.replace('Required', 'Optional'))
+    (SERVER / 'index.sig').unlink(missing_ok=True)
+    run('update', text='Optional:', env=dict(ENV, CPM_TEST_NO_SIGN='1'))
+    CONFIG.write_text(oldconf)
     CONFIG.write_text(oldconf + '\n[disabled]\nEnabled = no\nServer = $(touch /tmp/evil)\n')
     run('update')
     CONFIG.write_text(oldconf.replace('https://fixtures.invalid/$arch', 'https://fixtures.invalid/$(id)'))
@@ -204,6 +257,8 @@ try:
     assert not list((ROOT / 'var/lib/cpm/transactions').iterdir())
     # Partial publication failure must restore BOTH repository indices.
     CONFIG.write_text(oldconf + '\n[second]\nServer=https://fixtures.invalid/$arch\nEnabled=yes\nSigLevel=Optional\n')
+    shutil.copyfile(PUBLIC_KEY, PUBLIC_KEY.with_name('second.pem'))
+    PUBLIC_KEY.with_name('second.pem').chmod(0o644)
     run('update')
     indices_before = {p: p.read_bytes() for p in (ROOT / 'var/lib/cpm/repos').glob('*/index')}
     INDEX.write_bytes(b'')
