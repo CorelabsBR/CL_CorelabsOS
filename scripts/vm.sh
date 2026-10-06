@@ -19,11 +19,15 @@ done
 exigir_comando qemu-system-x86_64
 
 kernel="$COMPILACAO/kernel/bzImage"
-initramfs="$IMAGENS/corelabs-initramfs.cpio.gz"
-disco="$MAQUINAS/corelabs.qcow2"
+initramfs="$IMAGENS/Lithos-initramfs.cpio.gz"
+[[ "$VM_DISCO" == "$(basename -- "$VM_DISCO")" ]] ||
+    erro "VM_DISCO deve conter apenas o nome do arquivo"
+
+disco="$MAQUINAS/$VM_DISCO"
+marcador="$MAQUINAS/.${VM_DISCO%.qcow2}-instalado"
 if [[ ! -s "$kernel" || ! -s "$initramfs" ]]; then
     mensagem "Artefatos ausentes; iniciando compilação automática"
-    "$RAIZ/corelabs.sh" compilar
+    "$RAIZ/Lithos.sh" compilar
 elif [[ ! -e "$disco" ]]; then
     "$RAIZ/scripts/imagem.sh"
 fi
@@ -37,8 +41,15 @@ else
 fi
 
 video=(-display none)
-(( grafico )) && video=(-display gtk)
-mensagem "Inicializando Corelabs OS (${VM_CPUS} vCPUs, ${VM_MEMORIA_MB} MB)"
+if (( grafico )); then
+    video=(
+        -device virtio-vga
+        -device qemu-xhci
+        -device usb-tablet
+        -display gtk,grab-on-hover=off
+    )
+fi
+mensagem "Inicializando Lithos (${VM_CPUS} vCPUs, ${VM_MEMORIA_MB} MB)"
 comum=(-name "$VM_NOME" -machine q35 "${aceleracao[@]}" -m "$VM_MEMORIA_MB" -smp "$VM_CPUS"
     -drive "if=none,file=$disco,format=qcow2,id=disco0" -device virtio-blk-pci,drive=disco0
     -netdev user,id=rede0 -device virtio-net-pci,netdev=rede0 -serial mon:stdio "${video[@]}" -no-reboot)
@@ -48,10 +59,10 @@ if (( recuperacao )); then
         -append "console=ttyS0,115200 rdinit=/init panic=-1"
 fi
 
-[[ -f "$MAQUINAS/.corelabs-instalado" ]] || erro "sistema não instalado; execute ./corelabs.sh instalar"
+[[ -f "$marcador" ]] || erro "sistema não instalado; execute ./Lithos.sh instalar"
 "$RAIZ/scripts/preparar-uefi.sh"
 mensagem "Boot UEFI a partir do disco persistente"
 exec qemu-system-x86_64 "${comum[@]}" \
     -drive "if=pflash,format=raw,readonly=on,file=$OVMF_CODE" \
-    -drive "if=pflash,format=raw,file=$MAQUINAS/OVMF_VARS.fd"
+    -drive "if=pflash,format=raw,file=$MAQUINAS/$VM_UEFI_VARS"
 

@@ -8,8 +8,19 @@ source "$RAIZ/configuracao/vm.conf"
 
 [[ -r "$OVMF_CODE" ]] || erro "firmware OVMF ausente: $OVMF_CODE"
 [[ -r "$OVMF_VARS_MODELO" ]] || erro "modelo de variáveis OVMF ausente: $OVMF_VARS_MODELO"
-if [[ ! -f "$MAQUINAS/OVMF_VARS.fd" ]]; then
-    cp -- "$OVMF_VARS_MODELO" "$MAQUINAS/OVMF_VARS.fd"
-    mensagem "Armazenamento persistente das variáveis UEFI criado"
+
+[[ -n "${VM_UEFI_VARS:-}" ]] ||
+    erro "VM_UEFI_VARS não configurado"
+[[ "$VM_UEFI_VARS" != /* ]] ||
+    erro "VM_UEFI_VARS deve ser um caminho relativo"
+[[ "$VM_UEFI_VARS" != *".."* ]] ||
+    erro "VM_UEFI_VARS contém caminho inválido"
+
+vars="$MAQUINAS/$VM_UEFI_VARS"
+mkdir -p -- "$(dirname -- "$vars")"
+
+if [[ ! -f "$vars" ]]; then
+    cp -- "$OVMF_VARS_MODELO" "$vars"
+    mensagem "Armazenamento persistente das variáveis UEFI criado: $vars"
 fi
 

@@ -35,10 +35,13 @@ compilar_e2fsprogs() {
 compilar_sfdisk() {
     local arquivo="$FONTES/util-linux-$UTIL_LINUX_VERSAO.tar.xz"
     local arvore="$FONTES/util-linux-$UTIL_LINUX_VERSAO"
-    local saida="$COMPILACAO/util-linux"
+    local saida="$COMPILACAO/util-linux-instalador-$UTIL_LINUX_VERSAO"
+    local marca="$saida/.configuracao.sha256"
+    local hash_config
+    hash_config="$(printf '%s\n' "$UTIL_LINUX_SHA256" 'sfdisk-static-v1' | sha256sum | cut -d' ' -f1)"
     baixar_verificado "$UTIL_LINUX_URL" "$arquivo" "$UTIL_LINUX_SHA256"
     [[ -d "$arvore" ]] || tar -C "$FONTES" -xf "$arquivo"
-    if [[ ! -x "$saida/sfdisk.static" ]]; then
+    if [[ ! -x "$saida/sfdisk.static" || ! -f "$marca" || "$(<"$marca")" != "$hash_config" ]]; then
         rm -rf -- "$saida"
         mkdir -p -- "$saida"
         mensagem "Compilando sfdisk estático do util-linux $UTIL_LINUX_VERSAO"
@@ -51,6 +54,7 @@ compilar_sfdisk() {
                 --without-readline --disable-nls
             make -j"$(numero_trabalhos)" sfdisk.static
         ) >> "$log" 2>&1
+        printf '%s\n' "$hash_config" > "$marca"
     fi
     file "$saida/sfdisk.static" | grep -q 'statically linked' || erro "sfdisk não ficou estático"
 }

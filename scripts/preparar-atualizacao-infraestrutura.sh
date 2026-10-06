@@ -7,7 +7,7 @@ source "$RAIZ/scripts/biblioteca.sh"
 source "$RAIZ/configuracao/vm.conf"
 
 destino="$COMPILACAO/atualizacao-infraestrutura"
-pacote="$destino.tmp/opt/corelabs-infraestrutura"
+pacote="$destino.tmp/opt/Lithos-infraestrutura"
 
 assinatura_init="e031081d0540eef61aa6095558bbd82cf9f0afaf0e19e1d73f93020d6ed8b8fe"
 
@@ -17,7 +17,7 @@ rm -rf -- "$destino.tmp"
 
 mkdir -p \
     "$destino.tmp"/{dev,proc,sys,run,tmp,root,mnt,etc,usr,var,home} \
-    "$pacote/etc/corelabs/servicos"
+    "$pacote/etc/Lithos/servicos"
 
 make -C "$FONTES/busybox-$BUSYBOX_VERSAO" \
     O="$COMPILACAO/busybox" \
@@ -34,18 +34,18 @@ sed -i \
 
 cp "$RAIZ/sistema/init" "$pacote/init"
 
-cp "$RAIZ/sistema/etc/corelabs/inicializacao.sh" \
-    "$pacote/etc/corelabs/inicializacao.sh"
+cp "$RAIZ/sistema/etc/Lithos/inicializacao.sh" \
+    "$pacote/etc/Lithos/inicializacao.sh"
 
-cp "$RAIZ/sistema/etc/corelabs/encerramento.sh" \
-    "$pacote/etc/corelabs/encerramento.sh"
+cp "$RAIZ/sistema/etc/Lithos/encerramento.sh" \
+    "$pacote/etc/Lithos/encerramento.sh"
 
-cp "$RAIZ/sistema/etc/corelabs/servicos/01-diretorios" \
-    "$pacote/etc/corelabs/servicos/01-diretorios"
+cp "$RAIZ/sistema/etc/Lithos/servicos/01-diretorios" \
+    "$pacote/etc/Lithos/servicos/01-diretorios"
 
-mkdir -p     "$pacote/usr/bin"     "$pacote/usr/lib/corelabs"
+mkdir -p     "$pacote/usr/bin"     "$pacote/usr/lib/Lithos"
 
-cp "$RAIZ/sistema/usr/lib/corelabs/registro.sh"     "$pacote/usr/lib/corelabs/registro.sh"
+cp "$RAIZ/sistema/usr/lib/Lithos/registro.sh"     "$pacote/usr/lib/Lithos/registro.sh"
 
 cp "$RAIZ/sistema/usr/bin/clservice"     "$pacote/usr/bin/clservice"
 
@@ -56,9 +56,9 @@ cp "$RAIZ/sistema/etc/motd"     "$pacote/etc/motd"
 chmod 0755 \
     "$destino.tmp/init" \
     "$pacote/init" \
-    "$pacote/etc/corelabs/inicializacao.sh" \
-    "$pacote/etc/corelabs/encerramento.sh" \
-    "$pacote/etc/corelabs/servicos/01-diretorios"
+    "$pacote/etc/Lithos/inicializacao.sh" \
+    "$pacote/etc/Lithos/encerramento.sh" \
+    "$pacote/etc/Lithos/servicos/01-diretorios"
 
 mkdir -p "$IMAGENS"
 
@@ -69,9 +69,9 @@ mkdir -p "$IMAGENS"
         LC_ALL=C sort -z |
         cpio --null -o --format=newc --owner=0:0 2>/dev/null |
         gzip -9
-) > "$IMAGENS/corelabs-atualizacao-infraestrutura.cpio.gz"
+) > "$IMAGENS/Lithos-atualizacao-infraestrutura.cpio.gz"
 
 rm -rf -- "$destino"
 mv -- "$destino.tmp" "$destino"
 
-echo "[Corelabs] Pacote de infraestrutura preparado."
+echo "[Lithos] Pacote de infraestrutura preparado."

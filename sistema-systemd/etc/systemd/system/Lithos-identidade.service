@@ -1,10 +1,10 @@
 [Unit]
-Description=Aplicar a identidade básica do Corelabs OS
+Description=Aplicar a identidade básica do Lithos
 After=local-fs.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/hostname corelabs
+ExecStart=/usr/bin/hostname Lithos
 RemainAfterExit=yes
 
 [Install]

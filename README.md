@@ -1,42 +1,80 @@
 <div align="center">
 
-<img
-  src="./branding/system/oslogo.svg"
-  alt="Corelabs OS"
-  width="220"
-/>
+<img src="./branding/system/oslogo.svg" alt="Lithos" width="220" />
 
-# Corelabs OS
+# Lithos
 
 **Linux independente, open source e experimental.**
 
+*Versão 0.5 "Nexus"*
+
 </div>
 
-Corelabs OS é uma base Linux independente e experimental. A Fase 1 compila um kernel Linux oficial e um BusyBox estático, instala o rootfs em ext4 dentro de um QCOW2 e inicializa pelo GRUB e OVMF. Nenhum rootfs da distribuição hospedeira é copiado.
+---
 
-## Primeira compilação
+## Sobre
 
-Em Kubuntu 24.04:
+Lithos é uma base Linux construída do zero, sem copiar o rootfs da distribuição hospedeira. A **Fase 1** entrega:
+
+- 🐧 kernel Linux oficial compilado a partir das fontes;
+- 🧰 BusyBox estático como userland;
+- 💾 rootfs em **ext4** dentro de um disco **QCOW2** persistente;
+- 🚀 boot via **GRUB** e firmware UEFI (**OVMF**), rodando no QEMU.
+
+> ⚠️ **Status: experimental.** Não é pensado para uso em produção.
+
+## Início rápido
+
+Testado em **Kubuntu 24.04**.
 
 ```bash
-./corelabs.sh dependencias
-./corelabs.sh compilar
-./corelabs.sh verificar
-./corelabs.sh instalar
-./corelabs.sh iniciar
-./corelabs.sh testar-persistencia
+./Lithos.sh dependencias         # instala as dependências do host
+./Lithos.sh compilar             # compila kernel e BusyBox
+./Lithos.sh verificar            # confere os artefatos gerados
+./Lithos.sh instalar             # cria o disco e instala o sistema
+./Lithos.sh iniciar              # inicia a VM
+./Lithos.sh testar-persistencia  # valida que os dados sobrevivem ao reboot
 ```
 
-A primeira compilação baixa aproximadamente as fontes do Linux e do BusyBox e pode demorar. Downloads são aceitos apenas após validação SHA-256. Compilações seguintes reutilizam fontes e objetos. Para refazer o kernel por completo, use `./corelabs.sh kernel --forcar`.
+**Sobre a primeira compilação**
 
-O console usa a porta serial. Para desligar, execute `poweroff`; para reiniciar, `reboot`. O monitor QEMU compartilha o terminal e pode ser acessado com `Ctrl+A`, seguido de `C`; `Ctrl+A`, seguido de `X`, encerra a VM. A opção `./corelabs.sh iniciar --grafico` abre uma janela de vídeo, mas o terminal continua na serial.
+- Ela baixa as fontes do Linux e do BusyBox, então pode demorar.
+- Todo download só é aceito após validação **SHA-256**.
+- As próximas compilações reaproveitam fontes e objetos.
+- Para refazer o kernel por completo: `./Lithos.sh kernel --forcar`.
 
-O disco `maquinas/corelabs.qcow2` tem 40 GB e é preservado entre boots. `instalar` exige confirmação explícita antes de criar GPT, ESP FAT32 e raiz ext4. Consulte [a documentação do sistema persistente](documentacao/sistema-persistente.md).
+## Usando a VM
 
-Configurações de compilação ficam em `configuracao/compilacao.conf`; memória, vCPUs, tamanho inicial do disco e timeout ficam em `configuracao/vm.conf`. Consulte [a documentação técnica](documentacao/fase1.md) e [a estratégia de toolchain](documentacao/toolchain.md).
+O console funciona pela **porta serial**. Dentro da VM, use `poweroff` para desligar e `reboot` para reiniciar.
 
-A identidade oficial é Corelabs OS 0.3 Forge. Consulte [a documentação da identidade](documentacao/identidade.md) para arquivos instalados, cores opcionais e atualização não destrutiva.
+| Atalho | Ação |
+|---|---|
+| `Ctrl+A`, depois `C` | Abre o monitor QEMU (compartilha o terminal) |
+| `Ctrl+A`, depois `X` | Encerra a VM |
+
+Para abrir uma janela de vídeo, use `./Lithos.sh iniciar --grafico`. O terminal continua na serial.
+
+## Disco e instalação
+
+- O disco `maquinas/Lithos.qcow2` tem **40 GB** e é preservado entre boots.
+- O comando `instalar` pede **confirmação explícita** antes de criar a tabela GPT, a ESP (FAT32) e a raiz (ext4).
+
+## Configuração
+
+| Arquivo | Controla |
+|---|---|
+| `configuracao/compilacao.conf` | Parâmetros de compilação |
+| `configuracao/vm.conf` | Memória, vCPUs, tamanho inicial do disco e timeout |
+
+## Documentação
+
+| Documento | Assunto |
+|---|---|
+| [Fase 1](documentacao/fase1.md) | Documentação técnica |
+| [Toolchain](documentacao/toolchain.md) | Estratégia de toolchain |
+| [Sistema persistente](documentacao/sistema-persistente.md) | Disco, partições e persistência |
+| [Identidade](documentacao/identidade.md) | Arquivos instalados, cores opcionais e atualização não destrutiva |
 
 ## Comandos
 
-Execute `./corelabs.sh ajuda` para ver a interface completa. Os alvos equivalentes também estão disponíveis no `Makefile`.
+Execute `./Lithos.sh ajuda` para ver a interface completa. Os alvos equivalentes também estão no `Makefile`.

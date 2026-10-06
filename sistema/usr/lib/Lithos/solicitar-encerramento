@@ -1,0 +1,38 @@
+#!/bin/sh
+
+uso_shutdown() {
+    echo "Uso: shutdown [-h|-r] now" >&2
+    exit 2
+}
+
+comando="${0##*/}"
+operacao=
+
+case "$comando" in
+    reboot|poweroff|halt)
+        [ "$#" -eq 0 ] || {
+            echo "$comando: opções ainda não são suportadas" >&2
+            exit 2
+        }
+        operacao="$comando"
+        ;;
+    shutdown)
+        case "$#:$1:${2:-}" in
+            1:now:) operacao=poweroff ;;
+            2:-h:now) operacao=poweroff ;;
+            2:-r:now) operacao=reboot ;;
+            *) uso_shutdown ;;
+        esac
+        ;;
+    *)
+        echo "Solicitação de encerramento inválida." >&2
+        exit 2
+        ;;
+esac
+
+[ -x /usr/bin/clcontrol ] || {
+    echo "$comando: controle administrativo indisponível" >&2
+    exit 1
+}
+
+exec /usr/bin/clcontrol "$operacao"

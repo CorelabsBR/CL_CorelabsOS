@@ -1,0 +1,45 @@
+#!/bin/sh
+
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+script_dhcp=/usr/lib/Lithos/rede/dhcp
+pid_dir=/run/Lithos/rede
+
+mkdir -p "$pid_dir" || exit 1
+
+ip link set lo up ||
+    echo "[Rede] Aviso: não foi possível ativar loopback."
+
+encontrada=0
+
+for caminho in /sys/class/net/*; do
+    [ -e "$caminho" ] || continue
+
+    interface="${caminho##*/}"
+    [ "$interface" != "lo" ] || continue
+
+    # ARPHRD_ETHER = 1. Evita tentar DHCP em interfaces que não são Ethernet.
+    [ "$(cat "$caminho/type" 2>/dev/null)" = "1" ] || continue
+
+    encontrada=1
+
+    echo "[Rede] Ativando $interface."
+
+    if ! ip link set "$interface" up; then
+        echo "[Rede] Aviso: não foi possível ativar $interface." >&2
+        continue
+    fi
+
+    udhcpc \
+        -i "$interface" \
+        -s "$script_dhcp" \
+        -p "$pid_dir/udhcpc-$interface.pid" \
+        -b \
+        -R
+done
+
+if [ "$encontrada" -eq 0 ]; then
+    echo "[Rede] Nenhuma interface Ethernet encontrada."
+fi
+
+exit 0

@@ -1,8 +1,8 @@
 #!/bin/sh
 
-CORELABS_DIRETORIO_LOG="/var/log/corelabs"
+Lithos_DIRETORIO_LOG="/var/log/Lithos"
 
-corelabs_registrar() (
+Lithos_registrar() (
     categoria="${1:-GERAL}"
     mensagem="${2:-}"
     arquivo="${3:-inicializacao.log}"
@@ -15,12 +15,12 @@ corelabs_registrar() (
             ;;
     esac
 
-    mkdir -p "$CORELABS_DIRETORIO_LOG" || exit 1
+    mkdir -p "$Lithos_DIRETORIO_LOG" || exit 1
 
     data="$(date '+%Y-%m-%d %H:%M:%S' 2>/dev/null)" ||
         data="DATA_INDISPONIVEL"
 
     printf '[%s] [%s] %s\n' \
         "$data" "$categoria" "$mensagem" \
-        >> "$CORELABS_DIRETORIO_LOG/$arquivo"
+        >> "$Lithos_DIRETORIO_LOG/$arquivo"
 )

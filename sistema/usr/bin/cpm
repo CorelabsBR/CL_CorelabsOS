@@ -1,0 +1,361 @@
+#!/bin/sh
+set -eu
+export LC_ALL=C
+umask 022
+ROOT=${CPM_ROOT:-/}
+ROOT=${ROOT%/}
+[ -n "$ROOT" ] || ROOT=/
+CONF="${ROOT%/}/etc/cpm/repos.d"
+STATE="${ROOT%/}/var/lib/cpm"
+CACHE="${ROOT%/}/var/cache/cpm/packages"
+DB="$STATE/db/installed"
+OWN="$STATE/db/ownership"
+HELPER=${CPM_ARCHIVER:-/usr/libexec/cpm/arquivo}
+TX=
+WORK=
+UPDATE_PENDING=
+erro() { printf '[CPM] ERRO: %s\n' "$*" >&2; exit 1; }
+aviso() { printf '[CPM] AVISO: %s\n' "$*" >&2; }
+nome_valido() { printf '%s\n' "$1" | grep -Eq '^[a-z0-9][a-z0-9+_.-]{0,127}$'; }
+root() { [ "$(id -u)" -eq 0 ] || erro 'este comando requer root'; }
+comandos() { for cmd in "$@"; do command -v "$cmd" >/dev/null 2>&1 || erro "comando ausente: $cmd"; done; }
+ajuda() {
+    printf '%s\n' 'Lithos Package Manager 0.2' 'Uso: cpm <comando>' \
+        '  update                 Atualiza índices HTTPS (root)' \
+        '  search <termo>         Pesquisa nome/descrição no banco local' \
+        '  info <pacote>          Mostra metadados e estado instalado' \
+        '  list                   Lista pacotes instalados, offline' \
+        '  install <pacote>       Instala um pacote exato (root)' \
+        '  remove <pacote>        Remove somente arquivos próprios (root)' \
+        '  --version              Mostra versão' '  --help                 Mostra esta ajuda'
+}
+diretorio() {
+    [ ! -L "$1" ] || erro "diretório é symlink: $1"
+    mkdir -p "$1"
+    [ "$(stat -c %u "$1")" = "$(id -u)" ] || erro "owner de estado incorreto: $1"
+    [ "$(stat -c %a "$1")" = "$2" ] || chmod "$2" "$1"
+}
+lock() {
+    root
+    comandos flock mktemp curl openssl sha256sum awk grep sed stat realpath mkdir mv cp rm rmdir gzip xz bzip2 od cmp cat chmod tr uname sync wc
+    [ -x "$HELPER" ] || erro 'auxiliar CPM ausente'
+    [ "$(realpath "$ROOT")" = "$ROOT" ] || erro 'CPM_ROOT deve ser um diretório real canônico'
+    "$HELPER" root "$ROOT"
+    [ "$(uname -m)" = x86_64 ] || erro 'somente x86_64 é suportado'
+    diretorio "$STATE" 755; diretorio "$STATE/db" 755; diretorio "$DB" 755
+    diretorio "$STATE/repos" 755; diretorio "$STATE/transactions" 700; diretorio "$CACHE" 755
+    diretorio "${ROOT%/}/etc/cpm/keyrings" 755
+    [ ! -L "$STATE/lock" ] || erro 'lock é symlink'
+    exec 9>>"$STATE/lock"
+    flock -n 9 || erro 'outra operação CPM está em andamento'
+    [ ! -L "$OWN" ] || erro 'ownership é symlink'
+    [ -f "$OWN" ] || : > "$OWN"
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    trap 'exit 129' HUP
+    trap limpeza EXIT
+    recuperar
+}
+limpar_tx() {
+    idtx=${TX##*/}
+    case "$TX" in "$STATE/transactions/"tx.*) ;; *) erro 'path de transação inválido';; esac
+    printf '%s\n' "$idtx" | grep -Eq '^tx\.[A-Za-z0-9]{6}$' || erro 'id de transação inválido'
+    rm -rf -- "$CACHE/.txn.$idtx" "$TX" || return 1
+    TX=
+}
+reverter() {
+    [ -n "$TX" ] || return 0
+    [ -f "$TX/ready" ] || { limpar_tx || return 1; return; }
+    pkg=$(cat "$TX/name"); nome_valido "$pkg" || erro 'nome de transação corrompido'
+    op=$(cat "$TX/operation")
+    case "$op" in install|remove) ;; *) erro 'operação de transação corrompida';; esac
+    if [ -f "$TX/committed" ]; then
+        "$HELPER" finalize "$ROOT" "$TX/journal" || return 1
+    else
+        "$HELPER" undo "$ROOT" "$TX/journal" || return 1
+        if [ "$op" = install ] && [ -d "$DB/$pkg" ]; then
+            cmp "$TX/record/desc" "$DB/$pkg/desc" >/dev/null && cmp "$TX/record/files" "$DB/$pkg/files" >/dev/null || return 1
+            rm -- "$DB/$pkg/desc" "$DB/$pkg/files"
+            rmdir "$DB/$pkg" || return 1
+        fi
+        if [ "$op" = remove ] && [ -d "$TX/removed" ]; then
+            [ ! -e "$DB/$pkg" ] || return 1
+            mv "$TX/removed" "$DB/$pkg" || return 1
+        fi
+        cp "$TX/ownership.before" "$STATE/db/ownership.restore" || return 1
+        mv "$STATE/db/ownership.restore" "$OWN" || return 1
+    fi
+    limpar_tx
+}
+limpeza() {
+    code=$?
+    trap - EXIT INT TERM HUP
+    if [ -n "$UPDATE_PENDING" ]; then
+        while IFS='|' read -r repo server policy; do
+            [ -n "$repo" ] || continue
+            if [ -f "$WORK/$repo.before" ]; then
+                cp "$WORK/$repo.before" "$STATE/repos/$repo/.restore.$$" &&
+                    mv "$STATE/repos/$repo/.restore.$$" "$STATE/repos/$repo/index" || {
+                    aviso "restauração de índice falhou; snapshot preservado em $WORK"; exit 1;
+                }
+            else
+                rm -f -- "$STATE/repos/$repo/index" || exit 1
+            fi
+            rm -f -- "$STATE/repos/$repo/.index.$$" || exit 1
+        done < "$WORK/repos"
+    fi
+    if [ -n "$TX" ]; then
+        if ! reverter; then aviso "rollback incompleto; transação preservada em $TX"; code=1; fi
+    fi
+    [ -z "$WORK" ] || rm -rf -- "$WORK"
+    exit "$code"
+}
+recuperar() {
+    for pendente in "$STATE/transactions/"tx.*; do
+        [ -e "$pendente" ] || continue
+        [ -d "$pendente" ] && [ ! -L "$pendente" ] || erro 'transação pendente inválida'
+        TX=$pendente; aviso "recuperando transação pendente ${TX##*/}"
+        reverter || erro 'recuperação pendente falhou; requer inspeção administrativa'
+    done
+}
+configuracao() {
+    awk '
+    function bad(s) { print "[CPM] configuração inválida: " s > "/dev/stderr"; err=1; exit 1 }
+    function emit() {
+      if (!name || enabled=="no") return
+      if (!server || server !~ /^https:\/\/[A-Za-z0-9][A-Za-z0-9.:\/_$-]*$/) bad("Server HTTPS obrigatório")
+      if (server ~ /(^|\/)\.\.(\/|$)/) bad("Server inseguro")
+      test=server; gsub(/\$arch/,"",test); if (test ~ /\$/) bad("variável não suportada")
+      if (sig!="Required" && sig!="Optional") bad("SigLevel")
+      if (seen[name]++) bad("repositório duplicado")
+      print name "|" server "|" sig
+    }
+    FNR==1 { emit(); name="" }
+    { sub(/\r$/,""); sub(/^[ \t]+/,""); sub(/[ \t]+$/,"") }
+    /^($|#|;)/ { next }
+    /^\[/ {
+      emit(); if ($0 !~ /^\[[A-Za-z0-9][A-Za-z0-9_.-]*\]$/) bad("seção")
+      name=substr($0,2,length($0)-2); server=""; enabled="yes"; sig="Required"; delete keys; next
+    }
+    {
+      if (!name || !index($0,"=")) bad("entrada sem seção/=")
+      key=substr($0,1,index($0,"=")-1); val=substr($0,index($0,"=")+1)
+      sub(/[ \t]+$/,"",key); sub(/^[ \t]+/,"",val)
+      if (keys[key]++) bad("campo duplicado")
+      if (key=="Server") server=val
+      else if (key=="Enabled") { if (val!="yes" && val!="no") bad("Enabled"); enabled=val }
+      else if (key=="SigLevel") sig=val
+      else bad("campo desconhecido")
+    }
+    END { if (!err) emit(); if (err) exit 1 }
+    ' "$@"
+}
+repos() {
+    [ "$(uname -m)" = x86_64 ] || erro 'somente x86_64 é suportado'
+    set -- "$CONF/"*.repo
+    [ -f "$1" ] || erro "nenhum repositório em $CONF"
+    # No pipeline: preserve parser failures even without POSIX pipefail.
+    config=$(configuracao "$@") || erro 'configuração de repositórios inválida'
+    printf '%s\n' "$config" | sed 's/\$arch/x86_64/g'
+}
+validar_indice() {
+    [ "$(wc -c < "$1")" -le 8388608 ] || erro 'índice excede 8 MiB'
+    tr -d '\000' < "$1" | cmp - "$1" >/dev/null || erro 'índice contém NUL'
+    awk -F'|' '
+    NF!=7 || $1 !~ /^[a-z0-9][a-z0-9+_.-]*$/ || length($1)>128 ||
+    $2 !~ /^[A-Za-z0-9][A-Za-z0-9+_.~-]*$/ || length($2)>128 ||
+    $3 !~ /^[1-9][0-9]*$/ || length($3)>10 || $4!="x86_64" ||
+    $5 !~ /^[A-Za-z0-9][A-Za-z0-9+_.-]*\.cpm$/ || length($5)>200 ||
+    length($6)!=64 || $6 ~ /[^0-9a-f]/ || $7 ~ /[[:cntrl:]]/ || length($7)>1024 { bad=1 }
+    END { exit bad }
+    ' "$1" || erro "índice inválido: $1"
+}
+baixar() {
+    curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+        --tlsv1.2 --connect-timeout 10 --max-time 60 --max-filesize 536870912 --output "$2" "$1" || erro "download falhou: $1"
+}
+assinatura() {
+    policy=$1 repo=$2 url=$3 objeto=$4 sigfile=$5
+    key="${ROOT%/}/etc/cpm/keyrings/$repo.pem"
+    status=$(curl --silent --show-error --location --proto '=https' --proto-redir '=https' \
+        --tlsv1.2 --connect-timeout 10 --max-time 30 --max-filesize 65536 \
+        --output "$sigfile" --write-out '%{http_code}' "$url.sig") || erro 'falha ao consultar assinatura'
+    case "$status" in
+        404)
+            rm -- "$sigfile"
+            [ "$policy" = Optional ] || erro "assinatura obrigatória ausente: $url.sig"
+            aviso 'Optional: objeto sem assinatura; autenticidade criptográfica não verificada'
+            return 0
+            ;;
+        200) ;;
+        *) erro "consulta de assinatura retornou HTTP $status" ;;
+    esac
+    [ -f "$key" ] && [ ! -L "$key" ] || erro "chave pública confiável ausente: $key"
+    [ "$(stat -c %u "$key")" = 0 ] || erro "owner da chave pública deve ser root: $key"
+    mode=$(stat -c %a "$key")
+    case "$mode" in 444|440|400|644|640|600) ;; *) erro "permissões inseguras na chave pública: $key ($mode)";; esac
+    [ "$(wc -c < "$sigfile")" -le 1024 ] || erro 'assinatura excede o limite permitido'
+    openssl pkeyutl -verify -pubin -inkey "$key" -rawin -digest sha256 \
+        -pkeyopt rsa_padding_mode:pss -pkeyopt rsa_pss_saltlen:digest \
+        -in "$objeto" -sigfile "$sigfile" \
+        >/dev/null 2>&1 || erro "assinatura criptográfica inválida: $url"
+}
+update() {
+    lock; WORK=$(mktemp -d "$CACHE/.update.XXXXXX")
+    repos > "$WORK/repos" || erro 'configuração de repositórios inválida'
+    while IFS='|' read -r repo server policy; do
+        [ -n "$repo" ] || continue
+        baixar "${server%/}/index" "$WORK/$repo.index"
+        assinatura "$policy" "$repo" "${server%/}/index" "$WORK/$repo.index" "$WORK/$repo.sig"
+        validar_indice "$WORK/$repo.index"
+    done < "$WORK/repos"
+    while IFS='|' read -r repo server policy; do
+        [ -n "$repo" ] || continue
+        diretorio "$STATE/repos/$repo" 755
+        [ ! -L "$STATE/repos/$repo/index" ] || erro 'índice local é symlink'
+        cp "$WORK/$repo.index" "$STATE/repos/$repo/.index.$$"
+        chmod 644 "$STATE/repos/$repo/.index.$$"
+        if [ -e "$STATE/repos/$repo/index" ]; then
+            [ -f "$STATE/repos/$repo/index" ] || erro 'índice local não é arquivo regular'
+            cp "$STATE/repos/$repo/index" "$WORK/$repo.before"
+        fi
+    done < "$WORK/repos"
+    UPDATE_PENDING=yes
+    while IFS='|' read -r repo server policy; do
+        [ -n "$repo" ] || continue
+        mv "$STATE/repos/$repo/.index.$$" "$STATE/repos/$repo/index"
+        printf '[CPM] Índice atualizado: %s\n' "$repo"
+    done < "$WORK/repos"
+    UPDATE_PENDING=
+}
+indices() {
+    cfg=$(repos) || erro 'configuração inválida'; found=0
+    while IFS='|' read -r repo server policy; do
+        [ -n "$repo" ] || continue
+        file="$STATE/repos/$repo/index"
+        [ -f "$file" ] && [ ! -L "$file" ] || erro "índice ausente ($repo); execute sudo cpm update"
+        validar_indice "$file"
+        awk -v repo="$repo" '{print repo "|" $0}' "$file"; found=1
+    done <<EOF
+$cfg
+EOF
+    [ "$found" -eq 1 ] || erro 'nenhum repositório habilitado'
+}
+candidato() {
+    nome_valido "$1" || erro 'nome de pacote inválido'
+    data=$(indices) || erro 'não foi possível ler índices'
+    chosen=$(printf '%s\n' "$data" | awk -F'|' -v name="$1" '$2==name {print; n++} END {if(n!=1) exit 1}') || erro "pacote inexistente ou candidatos ambíguos: $1"
+}
+search() {
+    data=$(indices) || erro 'não foi possível ler índices'
+    printf '%s\n' "$data" | awk -F'|' -v q="$1" 'NF==8 && (index(tolower($2),tolower(q)) || index(tolower($8),tolower(q))) {print $2 " " $3 "-" $4 " [" $1 "] " $8}'
+}
+info() {
+    candidato "$1"
+    printf '%s\n' "$chosen" | awk -F'|' '{print "Name: " $2 "\nVersion: " $3 "\nRelease: " $4 "\nArchitecture: " $5 "\nRepository: " $1 "\nDescription: " $8}'
+    if [ -f "$DB/$1/desc" ]; then printf 'Installed: yes\n'; awk -F' = ' '/^(Version|Release) = / {print "Installed " $0}' "$DB/$1/desc"
+    else printf 'Installed: no\n'; fi
+}
+list() {
+    for desc in "$DB/"*/desc; do
+        [ -f "$desc" ] || continue
+        awk -F' = ' '$1=="Name" {n=$2} $1=="Version" {v=$2} $1=="Release" {r=$2} END {if(n && v && r) print n " " v "-" r; else exit 1}' "$desc" || erro 'desc instalado corrompido'
+    done
+}
+transacao() {
+    TX=$(mktemp -d "$STATE/transactions/tx.XXXXXX")
+    mkdir -m 700 "$CACHE/.txn.${TX##*/}"
+    STAGE="$CACHE/.txn.${TX##*/}"
+    printf '%s\n' "$1" > "$TX/name"; printf '%s\n' "$2" > "$TX/operation"
+    cp "$OWN" "$TX/ownership.before"; : > "$TX/ready"
+}
+manifest() {
+    awk -v n="$name" -v v="$version" -v r="$release" '
+    /^[ \t]*($|#)/ {next}
+    {
+      if ($0 ~ /[[:cntrl:]]/ || !index($0,"=")) {bad=1; next}
+      k=substr($0,1,index($0,"=")-1); val=substr($0,index($0,"=")+1)
+      sub(/^[ \t]+/,"",k); sub(/[ \t]+$/,"",k); sub(/^[ \t]+/,"",val); sub(/[ \t]+$/,"",val)
+      if (seen[k]++ || k!~/^(Name|Version|Release|Architecture|Description|Depends|Provides|Conflicts|Replaces)$/) bad=1
+      field[k]=val; if (k~/^(Depends|Conflicts|Replaces)$/ && val!="") bad=1
+    }
+    END {if(bad || field["Name"]!=n || field["Version"]!=v || field["Release"]!=r || field["Architecture"]!="x86_64") exit 1}
+    ' "$1" || erro 'MANIFEST divergente/inválido ou Depends/Conflicts/Replaces ainda não suportados'
+}
+install_pkg() {
+    lock; candidato "$1"
+    IFS='|' read -r repo name version release arch file hash description <<EOF
+$chosen
+EOF
+    [ ! -e "$DB/$name" ] && [ ! -L "$DB/$name" ] || erro 'pacote já instalado; upgrades não são suportados na v0.2'
+    cfg=$(repos) || erro 'configuração inválida'
+    source=$(printf '%s\n' "$cfg" | awk -F'|' -v r="$repo" '$1==r {print $2 "|" $3}')
+    IFS='|' read -r server policy <<EOF
+$source
+EOF
+    transacao "$name" install
+    baixar "${server%/}/packages/$file" "$STAGE/package.cpm"
+    assinatura "$policy" "$repo" "${server%/}/packages/$file" "$STAGE/package.cpm" "$STAGE/package.sig"
+    printf '%s  %s\n' "$hash" "$STAGE/package.cpm" | sha256sum --check --status || erro 'SHA-256 do pacote incorreto'
+    [ ! -L "$CACHE/$hash-$file" ] || erro 'cache é symlink'
+    mv "$STAGE/package.cpm" "$CACHE/$hash-$file"
+    magic=$(od -An -tx1 -N6 "$CACHE/$hash-$file" | tr -d ' \n')
+    (
+        # Cap decompressed data before parsing, not after filling a filesystem.
+        ulimit -f 524288
+        case "$magic" in
+            1f8b*) exec gzip -dc "$CACHE/$hash-$file" ;;
+            fd377a585a00*) exec xz -dc "$CACHE/$hash-$file" ;;
+            425a68*) exec bzip2 -dc "$CACHE/$hash-$file" ;;
+            *) erro 'compressão .cpm não suportada (gzip/xz/bzip2)' ;;
+        esac
+    ) > "$STAGE/archive.tar" || erro 'descompressão falhou (archive truncado ou limite excedido)'
+    mkdir -m 700 "$STAGE/tree"
+    "$HELPER" unpack "$STAGE/archive.tar" "$STAGE/tree"
+    manifest "$STAGE/tree/CPM/MANIFEST"
+    "$HELPER" check "$ROOT" "$STAGE/tree/files" "$OWN" "$name" install
+    "$HELPER" install "$ROOT" "$STAGE/tree" "$STAGE/tree/files" "$OWN" "$name" "$TX/journal"
+    mkdir "$TX/record"
+    awk -F'|' 'NR>1 {print $1 "|" $2 "|" $3 "|" $4}' "$TX/journal" > "$TX/record/files"
+    fhash=$(sha256sum "$TX/record/files"); fhash=${fhash%% *}
+    printf 'Name = %s\nVersion = %s\nRelease = %s\nArchitecture = x86_64\nRepository = %s\nDescription = %s\nPackageSHA256 = %s\nFilesSHA256 = %s\n' \
+        "$name" "$version" "$release" "$repo" "$description" "$hash" "$fhash" > "$TX/record/desc"
+    cat "$OWN" > "$TX/ownership.after"
+    awk -F'|' -v pkg="$name" '{print $2 "|" pkg}' "$TX/record/files" >> "$TX/ownership.after"
+    chmod 644 "$TX/record/files" "$TX/record/desc" "$TX/ownership.after"
+    cp "$TX/ownership.after" "$STATE/db/ownership.new"; mv "$STATE/db/ownership.new" "$OWN"
+    cp -R "$TX/record" "$TX/publish"; chmod 755 "$TX/publish"; mv "$TX/publish" "$DB/$name"
+    sync -f "$STATE"
+    : > "$TX/committed"
+    sync -f "$STATE"
+    reverter
+    printf '[CPM] Instalado: %s %s-%s\n' "$name" "$version" "$release"
+}
+remove_pkg() {
+    lock; name=$1; nome_valido "$name" || erro 'nome de pacote inválido'
+    [ -d "$DB/$name" ] && [ ! -L "$DB/$name" ] || erro "pacote não instalado: $name"
+    [ ! -L "$DB/$name/files" ] && [ ! -L "$DB/$name/desc" ] || erro 'registro instalado é symlink'
+    expected=$(awk -F' = ' '$1=="FilesSHA256" {print $2; n++} END {if(n!=1) exit 1}' "$DB/$name/desc") || erro 'desc corrompido'
+    printf '%s\n' "$expected" | grep -Eq '^[a-f0-9]{64}$' || erro 'hash files inválido'
+    printf '%s  %s\n' "$expected" "$DB/$name/files" | sha256sum --check --status || erro 'banco files corrompido'
+    "$HELPER" check "$ROOT" "$DB/$name/files" "$OWN" "$name" remove
+    transacao "$name" remove
+    "$HELPER" remove "$ROOT" "$STAGE" "$DB/$name/files" "$OWN" "$name" "$TX/journal"
+    awk -F'|' -v name="$name" '$2!=name' "$OWN" > "$STATE/db/ownership.new"
+    mv "$STATE/db/ownership.new" "$OWN"; mv "$DB/$name" "$TX/removed"
+    sync -f "$STATE"
+    : > "$TX/committed"
+    sync -f "$STATE"
+    reverter
+    printf '[CPM] Removido: %s\n' "$name"
+}
+case "${1:-}" in
+    --version|-V) [ "$#" -eq 1 ] || erro 'argumentos extras'; printf 'CPM 0.2\n' ;;
+    --help|-h|'') ajuda ;;
+    update) [ "$#" -eq 1 ] || erro 'uso: cpm update'; update ;;
+    search|info|install|remove)
+        [ "$#" -eq 2 ] && [ -n "$2" ] || erro "uso: cpm $1 <argumento>"
+        case "$1" in search) search "$2";; info) info "$2";; install) install_pkg "$2";; remove) remove_pkg "$2";; esac ;;
+    list) [ "$#" -eq 1 ] || erro 'uso: cpm list'; list ;;
+    *) erro "comando desconhecido: $1 (consulte --help)" ;;
+esac

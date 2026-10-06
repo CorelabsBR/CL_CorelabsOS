@@ -5,13 +5,15 @@ RAIZ="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 
 mostrar_ajuda() {
     cat <<'EOF'
-Uso: ./corelabs.sh <comando> [opções]
+Uso: ./Lithos.sh <comando> [opções]
 
 Comandos:
   dependencias       Instala as dependências no host Debian/Ubuntu
   compilar           Compila kernel, rootfs, initramfs e cria o disco
   kernel [--forcar]  Compila o kernel; --forcar refaz a compilação
-  rootfs             Compila o BusyBox e monta o sistema mínimo
+  rootfs             Compila o userspace e a Lithos Base ABI v1
+  base-abi           Compila a toolchain, sysroot e runtime GNU Lithos
+  auditar-elf        Audita loader e dependências ELF do rootfs
   imagem             Cria o disco QCOW2 persistente, se estiver ausente
   instalar           Instala o sistema no QCOW2 após confirmação explícita
   atualizar-identidade Atualiza a identidade sem formatar o disco
@@ -36,6 +38,8 @@ case "$comando" in
         "$RAIZ/scripts/imagem.sh"
         ;;
     kernel) exec "$RAIZ/scripts/kernel.sh" "$@" ;;
+    base-abi) exec "$RAIZ/scripts/compilar-base-abi.sh" "$@" ;;
+    auditar-elf) exec "$RAIZ/scripts/auditar-elf.sh" "$@" ;;
     rootfs)
         "$RAIZ/scripts/rootfs.sh" "$@"
         "$RAIZ/scripts/initramfs.sh"

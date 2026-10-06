@@ -4,21 +4,26 @@ RAIZ="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 # shellcheck source=../configuracao/compilacao.conf
 source "$RAIZ/configuracao/compilacao.conf"
 
+export LC_ALL=C
+export TZ=UTC
+export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-0}"
+umask 022
+
 FONTES="$RAIZ/fontes"
 COMPILACAO="$RAIZ/compilacao"
 IMAGENS="$RAIZ/imagens"
 MAQUINAS="$RAIZ/maquinas"
 LOGS="$COMPILACAO/logs"
 
-mensagem() { printf '[Corelabs] %s\n' "$*"; }
-erro() { printf '[Corelabs] Erro: %s\n' "$*" >&2; exit 1; }
+mensagem() { printf '[Lithos] %s\n' "$*"; }
+erro() { printf '[Lithos] Erro: %s\n' "$*" >&2; exit 1; }
 
 preparar_diretorios() {
     mkdir -p -- "$FONTES" "$COMPILACAO" "$IMAGENS" "$MAQUINAS" "$LOGS"
 }
 
 exigir_comando() {
-    command -v "$1" >/dev/null 2>&1 || erro "comando '$1' ausente; execute ./corelabs.sh dependencias"
+    command -v "$1" >/dev/null 2>&1 || erro "comando '$1' ausente; execute ./Lithos.sh dependencias"
 }
 
 numero_trabalhos() {
@@ -47,4 +52,3 @@ baixar_verificado() {
     }
     mv -- "$temporario" "$destino"
 }
-

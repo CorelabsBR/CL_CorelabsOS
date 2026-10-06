@@ -1,19 +1,19 @@
-# Estratégia da toolchain GNU e adoção do systemd
+# Toolchain GNU do Lithos
 
 ## Estado real
 
-O sistema persistente validado nesta etapa ainda usa o BusyBox 1.36.1 estático como espaço de usuário e o PID 1 experimental da Fase 0. Ele não copia bibliotecas ou executáveis da distribuição hospedeira. O e2fsprogs 1.47.2 e o util-linux 2.41.1 são compilados de fontes oficiais como executáveis estáticos usados somente pelo instalador.
+O pipeline atual implementa a [Lithos Base ABI v1](base-abi-v1.md): toolchain cruzada GNU própria, sysroot e runtime glibc/GCC, Coreutils e um subset do util-linux dinâmicos. BusyBox 1.36.1, Bash e os componentes administrativos existentes continuam estáticos. O PID 1, supervisor e consoles próprios são preservados. As ferramentas do instalador continuam estáticas, com util-linux alinhado à versão 2.42.2.
 
-A toolchain GNU completa e o systemd não foram ativados. Construí-los de forma auditável exige os passes de compilação cruzada, ferramentas temporárias, chroot e suítes de teste descritos pelo Linux From Scratch. Substituir o PID 1 antes desse processo contrariaria a exigência de manter a implementação comprovadamente inicializável.
+A toolchain executa no host, mas produz binários para o sysroot Lithos. O manifesto descreve o bootstrap, hashes, layout, auditoria de ELF e os limites da validação. A instalação de uma toolchain nativa dentro do Lithos e a execução integral das suítes GNU não estão implícitas nesta base.
 
-## Referência reprodutível
+## Referência histórica de expansão
 
-A referência adotada é o Linux From Scratch 13.1-systemd. As versões centrais estão registradas em `configuracao/fontes-lfs.csv`: Binutils 2.47, GCC 16.2.0, glibc 2.44, Bash 5.3, Coreutils 9.11, util-linux 2.42.2 e systemd 261.3.
+A referência de versões é o Linux From Scratch 13.1. As versões estão registradas em `configuracao/fontes-lfs.csv`. O planejamento anterior de uma distribuição completa com systemd abaixo é histórico e não faz parte da implementação da Base ABI v1.
 
 A implementação deverá seguir estas barreiras verificáveis:
 
 1. Baixar cada arquivo das origens oficiais e registrar SHA-256 antes da extração.
-2. Construir Binutils e GCC do primeiro passe com alvo `x86_64-corelabs-linux-gnu` em um prefixo isolado.
+2. Construir Binutils e GCC do primeiro passe com alvo `x86_64-Lithos-linux-gnu` em um prefixo isolado.
 3. Instalar cabeçalhos do kernel e construir glibc contra esses cabeçalhos.
 4. Construir libstdc++ e as ferramentas temporárias sem buscar bibliotecas do host em tempo de execução.
 5. Entrar em um ambiente isolado com `/dev`, `/proc`, `/sys` e `/run` próprios para construir o sistema final.
@@ -25,5 +25,4 @@ Os arquivos em `sistema-systemd/` preparam console serial, rede DHCP e identidad
 
 ## Recursos
 
-O LFS recomenda ao menos quatro núcleos e 8 GB de memória para uma construção confortável. O repositório mantém o limite de paralelismo configurável, mas uma toolchain completa requer várias horas, dezenas de gigabytes temporários e revisão dos resultados das suítes. Esta etapa não simula essa construção nem marca os pacotes planejados como instalados.
-
+O LFS recomenda ao menos quatro núcleos e 8 GB de memória para uma construção confortável. O repositório mantém o limite de paralelismo configurável; o bootstrap também limita trabalhos pela memória disponível. A Base ABI é compilada de fontes reais, mas não declara aprovação das suítes GNU completas nem ativa os componentes da expansão histórica.

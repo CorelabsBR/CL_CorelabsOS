@@ -62,19 +62,94 @@ mkdir -p -- "$rootfs.tmp"/{dev,proc,sys,run,tmp,root,mnt,etc,usr,var,home}
 make -C "$arvore" O="$saida" CONFIG_PREFIX="$rootfs.tmp" install >>"$LOGS/rootfs.log" 2>&1
 rsync -a -- "$RAIZ/sistema/" "$rootfs.tmp/"
 
-# Corelabs OS Sentinel: componentes nativos de userspace.
+# Substitui somente as interfaces administrativas que precisam passar pelo PID 1.
+for comando in shutdown reboot poweroff halt; do
+    rm -f -- "$rootfs.tmp/sbin/$comando"
+    ln -s ../usr/lib/Lithos/solicitar-encerramento "$rootfs.tmp/sbin/$comando"
+done
+
+# Lithos Nexus: componentes nativos de userspace.
 "$RAIZ/scripts/compilar-supervisor.sh"
+"$RAIZ/scripts/compilar-controle.sh"
+"$RAIZ/scripts/compilar-clcontrol.sh"
 "$RAIZ/scripts/compilar-bash.sh"
+"$RAIZ/scripts/compilar-sudo.sh"
+"$RAIZ/scripts/compilar-curl.sh"
+"$RAIZ/scripts/compilar-base-abi.sh"
+"$RAIZ/scripts/compilar-cpm.sh"
 
-install -Dm0755     "$COMPILACAO/clsupervisor/clsupervisor"     "$rootfs.tmp/usr/bin/clsupervisor"
+# GNU userspace normal; BusyBox permanece disponível pelo binário explícito.
+rsync -a --exclude=.configuracao.sha256 "$COMPILACAO/base-abi-runtime/" "$rootfs.tmp/"
+for executavel in "$COMPILACAO/base-abi-runtime/usr/bin/"*; do
+    comando="${executavel##*/}"
+    if [[ -L "$rootfs.tmp/bin/$comando" ]]; then
+        ln -sfn "../usr/bin/$comando" "$rootfs.tmp/bin/$comando"
+    fi
+done
 
-install -Dm0755     "$COMPILACAO/bash/bash"     "$rootfs.tmp/bin/bash"
-mkdir -p -- "$rootfs.tmp/etc/corelabs" "$rootfs.tmp/usr/share/pixmaps"
-cp -- "$RAIZ/branding/system/ascii.txt" "$rootfs.tmp/etc/corelabs/logo.ascii"
-cp -- "$RAIZ/branding/system/oslogo.svg" "$rootfs.tmp/usr/share/pixmaps/corelabs-logo.svg"
+install -Dm0755 \
+    "$COMPILACAO/clsupervisor/clsupervisor" \
+    "$rootfs.tmp/usr/bin/clsupervisor"
+
+install -Dm0755 \
+    "$COMPILACAO/clcontrold/clcontrold" \
+    "$rootfs.tmp/usr/sbin/clcontrold"
+
+install -Dm0755 \
+    "$COMPILACAO/clcontrol/clcontrol" \
+    "$rootfs.tmp/usr/bin/clcontrol"
+
+install -Dm0755 \
+    "$COMPILACAO/bash/bash" \
+    "$rootfs.tmp/bin/bash"
+
+# Uma cópia dedicada permite SUID apenas ao applet su. O BusyBox compartilhado
+# permanece sem privilégios e seleciona o applet pela basename de argv[0].
+install -Dm4755 \
+    "$saida/busybox" \
+    "$rootfs.tmp/bin/su"
+
+install -Dm4755 \
+    "$COMPILACAO/sudo/usr/bin/sudo" \
+    "$rootfs.tmp/usr/bin/sudo"
+
+install -Dm0755 \
+    "$COMPILACAO/curl/usr/bin/curl" \
+    "$rootfs.tmp/usr/bin/curl"
+
+# Verificador criptográfico usado pela cadeia de confiança do CPM. É a CLI
+# estática do mesmo OpenSSL fixado usado pelo curl; não instala chave privada.
+install -Dm0755 \
+    "$COMPILACAO/openssl/usr/bin/openssl" \
+    "$rootfs.tmp/usr/bin/openssl"
+
+bundle="$FONTES/cacert-$CA_BUNDLE_SHA256.pem"
+baixar_verificado "$CA_BUNDLE_URL" "$bundle" "$CA_BUNDLE_SHA256"
+install -Dm0644 \
+    "$bundle" \
+    "$rootfs.tmp/etc/ssl/certs/ca-certificates.crt"
+
+chmod 0440 "$rootfs.tmp/etc/sudoers"
+chmod 0600 "$rootfs.tmp/etc/shadow"
+chmod 0644 "$rootfs.tmp/etc/passwd" "$rootfs.tmp/etc/group" \
+    "$rootfs.tmp/etc/cpm/repos.d/Lithos.repo"
+install -Dm0755 "$COMPILACAO/cpm/arquivo" "$rootfs.tmp/usr/libexec/cpm/arquivo"
+chmod 0755 "$rootfs.tmp/usr/bin/cpm"
+mkdir -p "$rootfs.tmp/etc/cpm/keyrings"
+chmod 0755 "$rootfs.tmp/etc/cpm" "$rootfs.tmp/etc/cpm/keyrings" "$rootfs.tmp/etc/cpm/repos.d"
+mkdir -p -- "$rootfs.tmp/var/lib/sudo" "$rootfs.tmp/var/log/sudo-io"
+chmod 0700 "$rootfs.tmp/var/lib/sudo" "$rootfs.tmp/var/log/sudo-io"
+mkdir -p -- "$rootfs.tmp/etc/Lithos" "$rootfs.tmp/usr/share/pixmaps"
+cp -- "$RAIZ/branding/system/ascii.txt" "$rootfs.tmp/etc/Lithos/logo.ascii"
+cp -- "$RAIZ/branding/system/oslogo.svg" "$rootfs.tmp/usr/share/pixmaps/Lithos-logo.svg"
 chmod 0755 "$rootfs.tmp/init"
-chmod 0755 "$rootfs.tmp/usr/lib/corelabs/banner"
+chmod 0755 "$rootfs.tmp/usr/lib/Lithos/banner"
+# rsync preserva modos do checkout; um umask 0002 não deve produzir ancestrais
+# graváveis por grupo na raiz instalada (inclusive a própria raiz).
+find "$rootfs.tmp" -type d -exec chmod go-w {} +
 chmod 1777 "$rootfs.tmp/tmp"
+"$RAIZ/scripts/auditar-elf.sh" "$rootfs.tmp"
+"$RAIZ/scripts/auditar-seguranca.sh" "$rootfs.tmp"
 rm -rf -- "$rootfs"
 mv -- "$rootfs.tmp" "$rootfs"
 mensagem "Rootfs montado em $rootfs"

@@ -53,24 +53,62 @@ fi
 
 mount -t tmpfs tmpfs /run ||
     falha "não foi possível montar /run"
+mkdir -p /run/Lithos
+chmod 0755 /run/Lithos
 
 mount -t tmpfs tmpfs /tmp ||
     falha "não foi possível montar /tmp"
 
 hostname -F /etc/hostname 2>/dev/null ||
-    hostname corelabs
+    hostname Lithos
 
-if [ -x /etc/corelabs/inicializacao.sh ]; then
-    /etc/corelabs/inicializacao.sh ||
+if [ -x /usr/lib/Lithos/rede/iniciar ]; then
+    echo "[Lithos] Inicializando rede."
+    /usr/lib/Lithos/rede/iniciar ||
+        echo "[Lithos] Aviso: inicialização da rede apresentou falhas."
+fi
+
+if [ -x /etc/Lithos/inicializacao.sh ]; then
+    /etc/Lithos/inicializacao.sh ||
         echo "Aviso: alguns serviços falharam."
 fi
+
+if [ ! -x /usr/sbin/clcontrold ]; then
+    falha "clcontrold não está disponível"
+fi
+
+echo "[Lithos] Iniciando controle administrativo."
+/usr/sbin/clcontrold &
+PID_CONTROLE=$!
+
+tentativas=0
+while [ ! -S /run/Lithos/control.sock ]; do
+    if ! kill -0 "$PID_CONTROLE" 2>/dev/null; then
+        wait "$PID_CONTROLE" 2>/dev/null || true
+        falha "clcontrold encerrou antes de ficar operacional"
+    fi
+
+    [ "$tentativas" -lt 50 ] ||
+        falha "clcontrold não ficou operacional a tempo"
+
+    sleep 0.1
+    tentativas=$((tentativas + 1))
+done
+
+# O socket existir não basta se o daemon morreu logo depois de criá-lo.
+if ! kill -0 "$PID_CONTROLE" 2>/dev/null; then
+    wait "$PID_CONTROLE" 2>/dev/null || true
+    falha "clcontrold encerrou durante a inicialização"
+fi
+
+echo "[Lithos] Controle administrativo operacional."
 
 mostrar_banner() {
     console="$1"
 
     {
-        [ ! -x /usr/lib/corelabs/banner ] ||
-            /usr/lib/corelabs/banner
+        [ ! -x /usr/lib/Lithos/banner ] ||
+            /usr/lib/Lithos/banner
 
         cat /etc/motd
         echo "Kernel: $(uname -r) | Arquitetura: $(uname -m)"
@@ -78,16 +116,50 @@ mostrar_banner() {
     } > "$console" 2>&1
 }
 
-iniciar_tty1() {
+encerrar_console() {
+    pid_console="$1"
+    [ -n "$pid_console" ] || return 0
+
+    kill -TERM -- "-$pid_console" 2>/dev/null ||
+        kill -TERM "$pid_console" 2>/dev/null ||
+        return 0
+
+    tentativas=0
+    while kill -0 "$pid_console" 2>/dev/null; do
+        [ "$tentativas" -lt 10 ] || break
+        sleep 0.1
+        tentativas=$((tentativas + 1))
+    done
+
+    if kill -0 "$pid_console" 2>/dev/null; then
+        kill -KILL -- "-$pid_console" 2>/dev/null ||
+            kill -KILL "$pid_console" 2>/dev/null ||
+            true
+    fi
+
+    wait "$pid_console" 2>/dev/null || true
+}
+
+supervisionar_tty1() {
+    pid_console=
+    trap 'encerrar_console "$pid_console"; exit 0' TERM INT HUP
     while :; do
-        getty 0 tty1 linux
+        getty 0 tty1 linux &
+        pid_console=$!
+        wait "$pid_console"
+        pid_console=
         sleep 1
     done
 }
 
-iniciar_ttyS0() {
+supervisionar_ttyS0() {
+    pid_console=
+    trap 'encerrar_console "$pid_console"; exit 0' TERM INT HUP
     while :; do
-        getty -L 115200 ttyS0 vt100
+        getty -L 115200 ttyS0 vt100 &
+        pid_console=$!
+        wait "$pid_console"
+        pid_console=
         sleep 1
     done
 }
@@ -99,40 +171,77 @@ iniciar_ttyS0() {
 [ ! -c /dev/ttyS0 ] ||
     mostrar_banner /dev/ttyS0
 
-echo "[Corelabs] Iniciando consoles."
+echo "[Lithos] Iniciando consoles."
 
-iniciar_tty1 &
+supervisionar_tty1 &
 PID_TTY1=$!
 
-iniciar_ttyS0 &
+supervisionar_ttyS0 &
 PID_TTYS0=$!
 
 encerrar() {
-    trap - TERM INT
+    operacao="$1"
+    trap - USR1 TERM
 
-    echo "[Corelabs] Encerramento solicitado."
+    echo "[Lithos] Encerramento solicitado: $operacao."
 
-    kill "$PID_TTY1" "$PID_TTYS0" 2>/dev/null || true
+    kill -TERM "$PID_TTY1" "$PID_TTYS0" 2>/dev/null || true
     wait "$PID_TTY1" "$PID_TTYS0" 2>/dev/null || true
 
-    if [ -x /etc/corelabs/encerramento.sh ]; then
-        /etc/corelabs/encerramento.sh ||
-            echo "[Corelabs] Aviso: encerramento com falhas."
+    kill -TERM "$PID_CONTROLE" 2>/dev/null || true
+    wait "$PID_CONTROLE" 2>/dev/null || true
+
+    if [ -x /etc/Lithos/encerramento.sh ]; then
+        /etc/Lithos/encerramento.sh ||
+            echo "[Lithos] Aviso: encerramento com falhas."
     fi
 
-    echo "[Corelabs] Sincronizando os dados..."
+    echo "[Lithos] Sincronizando os dados..."
     sync
 
-    echo "[Corelabs] Desligando."
-umount /tmp /run /dev/pts /sys /proc 2>/dev/null
-    poweroff -f
+    umount /tmp /dev/pts /sys /proc 2>/dev/null || true
+    umount /run 2>/dev/null || true
+
+    case "$operacao" in
+        reboot)
+            echo "[Lithos] Reiniciando."
+            /bin/busybox reboot -f
+            ;;
+        halt)
+            echo "[Lithos] Parando."
+            /bin/busybox halt -f
+            ;;
+        poweroff)
+            echo "[Lithos] Desligando."
+            /bin/busybox poweroff -f
+            ;;
+    esac
 
     while :; do
         sleep 3600
     done
 }
 
-trap encerrar TERM INT
+receber_pedido() {
+    pedido=/run/Lithos/operacao
+    operacao=
+    if [ -r "$pedido" ]; then
+        IFS= read -r operacao < "$pedido" || true
+    fi
+
+    case "$operacao" in
+        poweroff|reboot|halt) encerrar "$operacao" ;;
+        *)
+            echo "[Lithos] Solicitação de encerramento inválida." >&2
+            rm -f "$pedido"
+            rmdir /run/Lithos/encerrando 2>/dev/null || true
+            ;;
+    esac
+}
+
+# SIGUSR1 usa o pedido oficial; SIGTERM mantém o desligamento seguro como fallback.
+trap receber_pedido USR1
+trap 'encerrar poweroff' TERM
 
 while :; do
     sleep 3600 &

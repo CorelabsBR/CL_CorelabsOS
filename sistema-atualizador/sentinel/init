@@ -8,7 +8,7 @@ INIT_ESPERADO="@ASSINATURA_INIT@"
 SUPERVISOR_ESPERADO="@ASSINATURA_SUPERVISOR@"
 
 ALVO=/alvo
-PACOTE=/opt/corelabs-sentinel
+PACOTE=/opt/Lithos-sentinel
 
 falhar() {
     echo "[Sentinel] ERRO: $*" >&2
@@ -115,7 +115,7 @@ cp "$PACOTE/os-release" \
 
 # Não substituir mensagens personalizadas.
 if [ ! -e "$ALVO/etc/motd" ] ||
-   grep -Fq 'Corelabs OS 0.3 Forge' "$ALVO/etc/motd"; then
+   grep -Fq 'Lithos 0.3 Forge' "$ALVO/etc/motd"; then
 
     cp "$PACOTE/motd" "$ALVO/etc/motd" ||
         falhar "Falha ao atualizar MOTD"
@@ -128,6 +128,6 @@ sync || falhar "Falha na sincronização"
 umount "$ALVO" ||
     falhar "Falha ao desmontar partição"
 
-echo "CORELABS_SENTINEL_ATUALIZADA_OK"
+echo "Lithos_SENTINEL_ATUALIZADA_OK"
 
 poweroff -f
